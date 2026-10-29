@@ -149,6 +149,11 @@ body{font-family:"Microsoft YaHei","Segoe UI",sans-serif}
 [data-theme=dark] .workbench-content .operation-card{border-color:#43546f}
 [data-theme=dark] .workbench-content .operation-card.selected{background:var(--hover);border-color:var(--blue);color:#b0caff}
 @media(max-width:800px){.workbench-content .chooser-operation{grid-template-columns:1fr;gap:10px}.workbench-content .chooser-charts{gap:10px}}
+.path-edit-actions{display:flex;align-items:center;gap:8px;margin-top:8px}
+.path-error{color:#c44353;font-size:12px;line-height:1.6;margin-top:7px;overflow-wrap:anywhere}
+.path-field textarea[aria-invalid=true]{border-color:#c44353}
+.path-field textarea:disabled{opacity:.7;cursor:wait}
+[data-theme=dark] .path-error{color:#ff9ca8}
 
 /* Searchable factory tiles: stable targets and a bounded grid for 20+ factories. */
 .factory-browser{padding:17px 0 16px;border-bottom:1px solid var(--border)}

@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "0.3.4"
+VERSION = "0.3.5"
 COLUMNS = {"id", "product", "lot", "wafer", "x", "y", "bv", "leakage", "bin"}
 NUMERIC = {"id", "x", "y", "bv", "leakage", "bin"}
 STATES = {"READY", "QUEUED", "RUNNING", "SUCCESS", "FAILED", "CANCELLED"}
@@ -104,6 +104,22 @@ class Core:
         ids=self.settings()['inputIds']
         sources=self.registered_sources(ids) if ids else {}
         return [sources[i] for i in ids if i in sources and not sources[i]['demo']]
+
+    def apply_input_paths(self, text):
+        from .paths import pasted_input_paths
+        paths = pasted_input_paths(text)
+        if not paths:
+            self.reset_inputs()
+            return []
+        return self.register(paths)
+
+    def apply_output_path(self, text):
+        if not isinstance(text, str) or not text.strip() or len(text) > 32_767 or len(text.strip().splitlines()) != 1:
+            raise ValueError('请填写一个本机输出文件夹路径')
+        try:
+            return self.set_output_directory(text)
+        except FileNotFoundError:
+            raise ValueError('输出文件夹不存在，请先创建或重新选择') from None
 
     def reset_inputs(self):
         # Start each client window with an empty work list, preserving paths,

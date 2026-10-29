@@ -82,7 +82,7 @@ class Bridge(QObject):
         future.add_done_callback(done)
 
     def import_paths(self, paths):
-        # Paths originate only from Qt file selection / OS drag and drop, never JS.
+        # Native selection/drop path; typed paths use explicit trusted RPCs below.
         if self.closed:
             return
         future = self.pool.submit(self.core.register, paths)
@@ -174,6 +174,8 @@ class Bridge(QObject):
                 operations = {
                     "bootstrap": self.core.bootstrap,
                     "identifyFiles": self.core.workspace_files,
+                    "applyInputPaths": lambda: self.core.apply_input_paths(p.get('text')),
+                    "applyOutputPath": lambda: self.core.apply_output_path(p.get('text')),
                     "removeInputs": lambda: self.core.remove_inputs(p.get("ids")),
                     "createTask": lambda: self.core.create_task(p.get("sourceId"),p.get('toolCode'),p.get('sourceIds')),
                     "createFollowup": lambda: self.core.followup(p.get('id')),

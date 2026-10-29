@@ -1,6 +1,6 @@
 # 独立项目测试入口
 
-更新：2026-10-29，当前界面版本 0.3.4，固定引擎 `studio-engine-20261029.1`。所有命令从 `F:\DataStudio` 执行，Python 使用 `.\.venv-cpython\Scripts\python.exe`。先按 README 准备固定环境、完整 `engines/` 和 `apps/web/dist/`。测试所用路径必须是新的独立目录，禁止使用正常个人历史做验证。
+更新：2026-10-29，当前界面版本 0.3.5，固定引擎 `studio-engine-20261029.1`。所有命令从 `F:\DataStudio` 执行，Python 使用 `.\.venv-cpython\Scripts\python.exe`。先按 README 准备固定环境、完整 `engines/` 和 `apps/web/dist/`。测试所用路径必须是新的独立目录，禁止使用正常个人历史做验证。
 
 迁移前 PLAN、CONTRACTS 与早期 VALIDATION 文档保留当时的日期、版本、统计和预览行为；它们不是当前操作手册。当前生产界面启动输入为空，只使用真实输入，结果为文件夹概要，Excel/CSV 由外部查看。本地图表仍可独立显示数据与图形，不等于恢复 APP 的 Excel 预览。
 
@@ -19,6 +19,7 @@
 | `verify_cp_restore_ui.py` | `--home <仅有一项成功CP清洗的私有home> --output <新目录>` | 三 CSV 导出哈希、打开文件夹、CP Cockpit HTTP 就绪、会话复用与退出清理；绘图另测，不硬编码 3,875 条 |
 | `verify_factory_ui.py` | `--output <新目录>` | 每阶段20家虚拟工厂布局、键盘、筛选、主题和搜索时延；无业务任务，不改磁盘引擎目录 |
 | `verify_operation_ui.py` | `--output <新目录>` | 当前10家工厂全部可选功能、42px按钮、选中不跳动、紧凑横排、明暗主题及1440/920窗口；检查重复说明已移除，操作要求保留在按钮悬停提示 |
+| `verify_editable_paths_ui.py` | `--cp <华虹DCP ZIP> --ft <上海捷敏DC文件> --output <新目录>` | Qt真实Ctrl+V及Enter、无效路径回退、多行/引号、真实CP/FT任务与重启默认输出；测试结束恢复保存的剪贴板 |
 | `verify_resize.py` | `--software --output <新目录>`；可加 `--recovery` 或 `--home <成功任务home>` | 原生 resize、最大化/还原、可用屏幕、黑屏采样、渲染故障恢复；`--charts` 原依赖演示图表，现明确拒绝并指向真实 Cockpit 脚本 |
 | `verify_installer.py` | `<Setup.exe> --home <成功华虹PAT私有home>` | 实际安装/覆盖/卸载，会操作测试安装注册项与快捷方式；只在无正式安装的受控机器执行；本轮只审核和保留旧证据 |
 
@@ -29,6 +30,7 @@
 | 脚本（apps/web/tests/ 下） | 参数 | 样本要求与边界 |
 | --- | --- | --- |
 | `verify-huahong-pat-ui.mjs` | `<exe> <私有home> <新证据目录>` | 必须有且仅有一项成功的华虹原始 PAT；按操作定位，不再限定历史名称为 `CP data 20261019`；检查 FT 口径、产品汇总、结果及无预览 |
+| `verify-editable-paths.mjs` | `<exe> <全新私有home> <新证据目录> <CP ZIP> <上海捷敏DC文件>` | 冻结客户端真实文本输入事件、错误路径、修改未应用时禁用开始，以及真实CP/FT使用编辑后的输入和输出目录 |
 | `verify-bundle-ui.mjs` | `<exe> <私有home> <新证据目录>` | 需要一项成功上海捷敏 DVDS，脚本会重新执行该真实任务；操作菜单、搜索、日志、结果任务选择、主题及小窗口。不要给任意 CP/FT 历史，DVDS 以外的任务不符合输入要求 |
 | `measure-ui-performance.mjs` | `<exe> <新证据目录> [--strict]` | 可见窗口连续3轮，记录启动/切换/工厂搜索；超预算结果为 REVIEW，`--strict` 返回非零。并非全部硬件或冷启动性能承诺 |
 | `verify-cp-charts.mjs` | `<正在运行的本机Cockpit URL> <新证据目录>` | 专用样本要求：1批、25片、13参数，含 VTH、W2；依赖本机 Edge。实际渲染 Plotly、各页签与导出，不可拿任意小样本运行后宣称完整图表验收 |

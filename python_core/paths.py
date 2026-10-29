@@ -25,6 +25,27 @@ def local_path(value):
     return Path(value).resolve(strict=True)
 
 
+def pasted_input_paths(text):
+    if not isinstance(text, str) or len(text) > 64_000:
+        raise ValueError('输入路径无效或过长')
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if len(lines) > 100:
+        raise ValueError('每次最多登记100项输入，请分行填写路径')
+    paths = []
+    for index, line in enumerate(lines, 1):
+        try:
+            path = local_path(line)
+            if not path.is_file() and not path.is_dir():
+                raise ValueError('只接受普通文件或文件夹')
+        except FileNotFoundError:
+            raise ValueError(f'第 {index} 行路径不存在，请检查后重试') from None
+        except (OSError, ValueError) as exc:
+            raise ValueError(f'第 {index} 行路径无效：{exc}') from None
+        if path not in paths:
+            paths.append(path)
+    return list(map(str, paths))
+
+
 def output_parent(value,workspace,sources=()):
     path=local_path(value)
     if not path.is_dir():raise ValueError('输出位置必须是文件夹')

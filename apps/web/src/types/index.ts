@@ -9,7 +9,7 @@ export interface Snapshot {files:SourceFile[]; tasks:Task[]; settings:Settings; 
 export interface PreviewRequest {dataset:'demo_raw'|'demo_clean'; start:number; end:number; search:string; sort:{colId:string;sort:'asc'|'desc'}[]; filters:Record<string,unknown>;}
 export interface PreviewResponse {rows:Record<string,string|number>[]; total:number; elapsedMs:number;}
 export interface ChartData {histogram:{label:string;count:number}[]; points:number[][]; count:number; mean:number; min:number; max:number; unit:string; sampleCount:number;}
-export type RpcMethod='bootstrap'|'removeInputs'|'selectInputs'|'selectOutputDirectory'|'selectFiles'|'selectFolder'|'identifyFiles'|'createTask'|'startTask'|'cancelTask'|'getTaskLog'|'getTaskStatus'|'getPreview'|'getChartData'|'listHistory'|'openOutputFolder'|'exportResult'|'exportChart'|'saveSettings'|'clearCache'|'copyText'|'openLogs'|'openArtifact'|'createFollowup'|'openCPCharts'|'exportResultFolder'|'getResultDetails';
+export type RpcMethod='bootstrap'|'applyInputPaths'|'applyOutputPath'|'removeInputs'|'selectInputs'|'selectOutputDirectory'|'selectFiles'|'selectFolder'|'identifyFiles'|'createTask'|'startTask'|'cancelTask'|'getTaskLog'|'getTaskStatus'|'getPreview'|'getChartData'|'listHistory'|'openOutputFolder'|'exportResult'|'exportChart'|'saveSettings'|'clearCache'|'copyText'|'openLogs'|'openArtifact'|'createFollowup'|'openCPCharts'|'exportResultFolder'|'getResultDetails';
 export interface DataService {
   mode:'desktop'|'mock';
   call<T>(method:RpcMethod,params?:Record<string,unknown>):Promise<T>;
