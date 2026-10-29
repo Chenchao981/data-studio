@@ -55,12 +55,12 @@ try{
  if(!await evaluate(`document.querySelector('${pat}').getAttribute('aria-pressed')==='true'`))throw Error('New PAT entry cannot be selected');
  const buttons=await evaluate(`[...document.querySelectorAll('[data-tool]')].map(e=>({code:e.dataset.tool,text:e.textContent}))`);
  if(buttons.filter(b=>b.text.includes('PAT')).length!==1)throw Error('Ambiguous PAT entries');
- if(!buttons.some(b=>b.text.includes('FT口径')))throw Error('FT formula label missing');
+ if(buttons.find(b=>b.code==='LOCAL_CP_HUAHONG_RAW_PAT_V1')?.text.trim()!=='华虹PAT统计')throw Error('Unified factory PAT label missing');
  if(!await evaluate(`document.querySelector('${pat}').title.includes('同一产品汇总计算并输出一个PAT Excel')`))throw Error('Product aggregation tooltip missing');
  if(await evaluate(`!!document.querySelector('.input-guide, .source-hint, .path-start, .path-field small')`))throw Error('Repeated workspace hints remain');
  await screenshot('huahong-raw-pat');
  await button('历史记录');
- const patHistory=`[...document.querySelectorAll('.history-list article')].filter(a=>a.textContent.includes('FT口径')&&[...a.querySelectorAll('button')].some(b=>b.textContent.trim()==='查看结果'))`;
+ const patHistory=`[...document.querySelectorAll('.history-list article')].filter(a=>a.textContent.includes('华虹PAT统计')&&[...a.querySelectorAll('button')].some(b=>b.textContent.trim()==='查看结果'))`;
  await wait(`(${patHistory}).length>0`);
  if(await evaluate(`(${patHistory}).length`)!==1)throw Error('Use a private home with exactly one successful HuaHong raw PAT task');
  await evaluate(`[...(${patHistory})[0].querySelectorAll('button')].find(b=>b.textContent.trim()==='查看结果').click()`);

@@ -79,14 +79,12 @@ def generate_huahong_pat(sources, output):
     import numpy as np
     import pandas as pd
 
-    package = Path(os.environ['STUDIO_FT_PAT_PACKAGE'])
-    if hashlib.sha256(package.read_bytes()).hexdigest() != os.environ['STUDIO_FT_PAT_SHA256']:
-        raise ValueError('FT PAT计算包校验失败')
-    sys.path.insert(0, str(package))
-    from shared.pat_engine import RawPatGroup, build_spooled_raw_pat
+    from local_pat_common import ft_pat_engine
+    engine, provenance = ft_pat_engine()
+    RawPatGroup, build_spooled_raw_pat = engine.RawPatGroup, engine.build_spooled_raw_pat
     from shared.excel_utils import write_excel_fast
 
-    manifest = {'formula': 'FT_MEDIAN_IQR_6SIGMA_V1', 'sigma_divisor': 1.35, 'sigma_multiplier': 6,
+    manifest = {**provenance,
                 'quartiles': 'pandas linear', 'population': 'all raw measurement rows, no Bin or IQR filtering',
                 'display_units': 'source specification units; raw SI values divided by unit scale',
                 'ft_package_sha256': os.environ['STUDIO_FT_PAT_SHA256'],

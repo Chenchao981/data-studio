@@ -52,6 +52,14 @@ def main():
 
 
 def write_manifest(root):
+    # All CP/FT routes must share the very same approved statistics source.
+    # Refuse future packages that accidentally ship divergent PAT algorithms.
+    pat_sources = []
+    for package in ('native', 'shared'):
+        with zipfile.ZipFile(root/'packages'/f'{package}.pyz') as archive:
+            pat_sources.append(hashlib.sha256(archive.read('shared/pat_engine.py')).hexdigest())
+    if len(set(pat_sources)) != 1:
+        raise ValueError('CP/FT共用的PAT统计实现不一致，拒绝生成计算组件')
     program='''import sys,json,dataclasses
 from pathlib import Path
 r=Path(sys.argv[1]);sys.path[:0]=[str(r/'code'),str(r/'code/backend'),str(r/'code/desktop_client')]
@@ -80,7 +88,7 @@ print(json.dumps(tools,ensure_ascii=True))'''
     for name,item in runtime['files'].items():
         if digest(root/'runtime'/name)!=item['sha256']:raise ValueError('Installed runtime changed: '+name)
     files.update({'runtime/'+n:v['sha256'] for n,v in runtime['files'].items()})
-    (root/'manifest.json').write_text(json.dumps({'version':'studio-engine-20261029.2','python':'3.13.17','packages':runtime['packages'],'files':files,'tools':tools},ensure_ascii=False,indent=2),encoding='utf8')
+    (root/'manifest.json').write_text(json.dumps({'version':'studio-engine-20261029.3','python':'3.13.17','patStatistics':{'module':'shared/pat_engine.py','sha256':pat_sources[0]},'packages':runtime['packages'],'files':files,'tools':tools},ensure_ascii=False,indent=2),encoding='utf8')
     print('Pinned engine kit:',len(tools),'operations;',len(files),'verified files')
     if (root/'viewer-packages').is_dir():
         from prepare_viewer import pin_viewer

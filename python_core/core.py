@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "0.3.6"
+VERSION = "0.3.7"
 COLUMNS = {"id", "product", "lot", "wafer", "x", "y", "bv", "leakage", "bin"}
 NUMERIC = {"id", "x", "y", "bv", "leakage", "bin"}
 STATES = {"READY", "QUEUED", "RUNNING", "SUCCESS", "FAILED", "CANCELLED"}

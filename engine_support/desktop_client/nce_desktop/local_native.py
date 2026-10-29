@@ -212,7 +212,7 @@ def run_native(cfg, tool, source, stage, runner):
     stage.mkdir(parents=True)
     package = cfg.cp_package if tool.test_stage == "CP" else cfg.ft_package
     extra_env = {}
-    if tool.tool_code == HH_PAT_CODE:
+    if tool.test_stage == 'CP' and tool.analysis_type == 'QUICK_PAT':
         if digest(cfg.ft_package) != cfg.ft_package_sha256:
             raise ValueError('FT PAT计算包校验失败')
         extra_env = {'STUDIO_FT_PAT_PACKAGE': str(cfg.ft_package), 'STUDIO_FT_PAT_SHA256': cfg.ft_package_sha256}

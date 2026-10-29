@@ -192,7 +192,7 @@ def execute(home, task_id):
         )
         from .local_native import BY_CODE, run_native
 
-        if tool.tool_code in BY_CODE:
+        if tool.tool_code in BY_CODE or (tool.test_stage == 'CP' and tool.analysis_type == 'QUICK_PAT'):
             result = run_native(
                 config(home),
                 tool,

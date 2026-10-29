@@ -57,6 +57,13 @@ def config(home):
 
 
 def desktop_capability(tool):
+    if tool.analysis_type == 'QUICK_PAT':
+        names = {'HUAHONG':'华虹','JETECH':'佳泰','LION':'立昂微','GUOYU':'国宇 FRD',
+                 'JIEQUN':'杰群','RIYUEXIN':'日月新','JIEMIN':'上海捷敏','DIANJI':'电基',
+                 'RIYUEGUANG':'日月光','JIJIA':'集佳'}
+        tool = replace(tool, display_name=names.get(tool.factory_code,tool.factory_code)+'PAT统计')
+        if tool.test_stage == 'CP':
+            tool = replace(tool, input_kind='directory-or-file')
     if tool.test_stage == 'FT' and tool.analysis_type == 'QUICK_CHART':
         return replace(tool, input_kind='directory', allowed_suffixes=(
             ('.xls', '.xlsx') if tool.factory_code == 'JIEMIN' else tool.allowed_suffixes))
@@ -93,6 +100,10 @@ def tool_by_code(home, code):
 
 def input_help(tool):
     from .local_native import BY_CODE
+
+    if tool.test_stage == 'CP' and tool.analysis_type == 'QUICK_PAT':
+        hint = BY_CODE[tool.tool_code].help if tool.tool_code in BY_CODE else '选择本工厂原始CP测试数据文件、文件夹或受支持压缩包。'
+        return hint+'；统一使用FT算法：线性分位数、IQR/1.35、中位数±6Sigma；不按Bin或IQR删值，参数/单位/规格/条件兼容后才合并。'
 
     if tool.tool_code in BY_CODE:
         return BY_CODE[tool.tool_code].help
@@ -145,7 +156,7 @@ def request_for(home, tool_code, source, title="", parent_id=None):
                 for p in str(source).split(";")
                 if p.strip()
             ]
-            if tool_code in BY_CODE and tool.test_stage == "CP"
+            if tool.test_stage == "CP"
             else [Path(source).expanduser().resolve()]
         )
         if not source_paths:
@@ -154,6 +165,8 @@ def request_for(home, tool_code, source, title="", parent_id=None):
             raise ValueError("请勿重复选择同一个输入文件")
         if len(source_paths) > 1:
             permitted = (
+                set(tool.allowed_suffixes)
+                if tool.test_stage == 'CP' and tool.analysis_type == 'QUICK_PAT' else
                 {'.txt','.dcp','.zip','.7z','.7zip','.rar'}
                 if tool_code=='LOCAL_CP_HUAHONG_CLEAN_V1' else
                 {".xlsx"}

@@ -9,8 +9,8 @@
 
 ## 本机使用
 
-双击根目录的 `启动DataStudio.bat`，优先运行已核验的 `dist/v0.3.6/DesktopDataStudio/DesktopDataStudio.exe`，新版缺失时回退0.3.5，再回退旧目录 `dist/DesktopDataStudio/DesktopDataStudio.exe`。
-当前本机程序为0.3.6，CP图表默认仅显示一个参数的箱线散点组合图；其他图形选择后点击“重新绘制”才执行和显示，详见 [0.3.6记录](docs/RELEASE-0.3.6.md)。输入、输出路径继续支持粘贴和编辑，修改后点击“应用路径”，多项输入分行填写；详见 [0.3.5记录](docs/RELEASE-0.3.5.md)。保留紧凑横排界面；当前用户安装包仍为0.3.3。请先关闭原工作区窗口，再从根目录启动新版。
+双击根目录的 `启动DataStudio.bat`，优先运行已核验的 `dist/v0.3.7/DesktopDataStudio/DesktopDataStudio.exe`，新版缺失时依次回退0.3.6、0.3.5和旧目录 `dist/DesktopDataStudio/DesktopDataStudio.exe`。
+当前本机程序为0.3.7，CP/FT PAT共用固定FT统计实现，名称统一为“工厂名称PAT统计”，详见 [0.3.7记录](docs/RELEASE-0.3.7.md)；旧历史报表保留原算法，重新执行才使用新算法。CP图表保留默认组合图和按需重绘，输入/输出路径继续支持粘贴编辑。当前用户安装包仍为0.3.3。请先关闭原工作区窗口，再从根目录启动新版。
 历史记录继续使用 `%LOCALAPPDATA%\NCE\DesktopDataStudio-M0`；原有清洗输出路径不变。
 同一工作区仅运行一个实例，计算任务串行排队。
 
