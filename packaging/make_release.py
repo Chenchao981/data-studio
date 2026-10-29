@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import uuid
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
@@ -65,17 +66,26 @@ def compiler() -> tuple[Path, dict]:
     return exe, lock
 
 
-def bundle_payload(bundle: Path) -> tuple[dict[str, Path], dict]:
+def bundle_payload(bundle: Path) -> tuple[dict[str, Path], dict, dict[str, str]]:
     manifest = json.loads((bundle / "engines/manifest.json").read_text(encoding="utf8"))
     if manifest["python"] != "3.13.17" or not manifest["tools"]:
         raise ValueError("Missing pinned calculation runtime")
     files = {**manifest["files"], **manifest.get("viewer", {}).get("files", {})}
     payload = {}
-    for name, expected in files.items():
+    hashes = {}
+
+    def verify(item):
+        name, expected = item
         source = checked_path(bundle / "engines", name)
         if sha256(source) != expected:
             raise ValueError(f"Engine file checksum mismatch: {name}")
-        payload["engines/" + name] = source
+        return "engines/" + name, source, expected
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for count, (name, source, expected) in enumerate(pool.map(verify, files.items()), 1):
+            payload[name], hashes[name] = source, expected
+            if count % 2000 == 0:
+                print(f"Verified calculation files: {count}/{len(files)}", flush=True)
     for name in ["manifest.json", "runtime/runtime-manifest.json"]:
         payload["engines/" + name] = checked_path(bundle / "engines", name)
     pins = json.loads((ROOT / "engine-pins.json").read_text())
@@ -98,7 +108,7 @@ def bundle_payload(bundle: Path) -> tuple[dict[str, Path], dict]:
                 raise ValueError("Frozen web resources differ from current built UI: " + name)
     if not any(name.startswith("_internal/third-party-notices/") for name in payload):
         raise ValueError("Third-party license notices are missing")
-    return payload, manifest
+    return payload, manifest, hashes
 
 
 def nsis(value: str | Path) -> str:
@@ -139,7 +149,7 @@ def main() -> None:
         raise FileExistsError(f"Release already exists; keep it immutable and use a new version: {output}")
     bundle = (ROOT / "dist/DesktopDataStudio").resolve()
     print("Checking frozen application and calculation engine...", flush=True)
-    payload, engine = bundle_payload(bundle)
+    payload, engine, hashes = bundle_payload(bundle)
     exe, toolchain = compiler()
     payload["安装使用说明.txt"] = ROOT / "packaging/user-guide.txt"
     payload["licenses/NSIS-COPYING.txt"] = exe.parent / "COPYING"
@@ -147,7 +157,11 @@ def main() -> None:
     staging.mkdir(parents=True)
     workspace = ROOT / "build/installer" / uuid.uuid4().hex
     workspace.mkdir(parents=True)
-    hashes = {name: sha256(source) for name, source in sorted(payload.items())}
+    remaining = [(name, source) for name, source in payload.items() if name not in hashes]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for name, checksum in pool.map(lambda item: (item[0], sha256(item[1])), remaining):
+            hashes[name] = checksum
+    hashes = dict(sorted(hashes.items()))
     size = sum(source.stat().st_size for source in payload.values())
     install_manifest = workspace / "install-manifest.json"
     install_manifest.write_text(json.dumps(dict(version=version, engineVersion=engine["version"], files=hashes), ensure_ascii=False, indent=2), encoding="utf8")
@@ -159,7 +173,7 @@ def main() -> None:
     subprocess.run(command, check=True)
     shutil.copyfile(ROOT / "packaging/user-guide.txt", staging / "安装使用说明.txt")
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    receipt = dict(version=version, architecture="win-x64", createdUtc=datetime.now(timezone.utc).isoformat(), sourceCommit=commit, python="3.13.17", engineVersion=engine["version"], operations=len(engine["tools"]), installedFiles=len(payload) + 1, installedBytes=size + install_manifest.stat().st_size, installer=dict(name=setup.name, bytes=setup.stat().st_size, sha256=sha256(setup)), toolchain=toolchain, enterpriseCodeSigned=False, userDataIncluded=False)
+    receipt = dict(version=version, architecture="win-x64", createdUtc=datetime.now(timezone.utc).isoformat(), sourceCommit=commit, python="3.13.17", engineVersion=engine["version"], operations=len(engine["tools"]), installedFiles=len(payload) + 2, installedBytes=size + install_manifest.stat().st_size, installer=dict(name=setup.name, bytes=setup.stat().st_size, sha256=sha256(setup)), toolchain=toolchain, enterpriseCodeSigned=False, userDataIncluded=False)
     (staging / "release.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf8")
     (staging / "SHA256SUMS.txt").write_text("".join(f"{sha256(p)}  {p.name}\n" for p in sorted(staging.iterdir()) if p.is_file()), encoding="utf8")
     staging.rename(output)
