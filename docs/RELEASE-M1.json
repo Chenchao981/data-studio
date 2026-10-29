@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "file": "DesktopDataStudio-M1-20261023.zip",
+  "size": 391177457,
+  "sha256": "d98cd993e0e113e1ac09a4afb36ad0be6aab5eae5bd62c3cb2c39b66a1a04fca",
+  "files": 17792,
+  "pinnedEngineFiles": 14426,
+  "version": "0.2.0-m1",
+  "python": "3.13.17",
+  "engineVersion": "studio-engine-20261023.1"
+}

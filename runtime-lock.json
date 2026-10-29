@@ -1,0 +1,8 @@
+{
+  "implementation": "CPython",
+  "version": "3.13.17",
+  "architecture": "win-amd64",
+  "source": "https://api.nuget.org/v3-flatcontainer/python/3.13.17/python.3.13.17.nupkg",
+  "sha256": "dce409744b088f94c6e37ba41f8100c384c27e029e843237364c602d30d475e5",
+  "notes": "Official Python Software Foundation NuGet build package; local extraction only, no registry or PATH changes."
+}

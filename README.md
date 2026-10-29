@@ -1,0 +1,49 @@
+# Data Studio · CP/FT 本地数据工作台
+
+独立桌面项目，提供 CP/FT 数据清洗、PAT、SBL/SYL、本地图表及历史记录。采用 PySide6/Qt WebEngine + React，计算由锁定版本的 CP/FT Python 引擎执行。
+
+- 项目目录：`F:\DataStudio`
+- 私有仓库：https://github.com/Chenchao981/data-studio
+- 与 PYMS 独立维护；需要共享的改动由项目负责人手动核对、移植。
+- 用户源数据和分析结果留在本机，不随 Git 或发布包上传。
+
+## 本机使用
+
+双击根目录的 `启动DataStudio.bat`，优先运行 `dist/DesktopDataStudio/DesktopDataStudio.exe`。
+历史记录继续使用 `%LOCALAPPDATA%\NCE\DesktopDataStudio-M0`；原有清洗输出路径不变。
+同一工作区仅运行一个实例，计算任务串行排队。
+
+## 开发与构建
+
+Windows x64，先安装 Git/GitHub CLI 和 Node.js。Python 使用 `runtime-lock.json` 指定的官方 CPython，由脚本安装到项目内，依赖严格按 `environments/*.lock` 安装。
+
+```powershell
+git clone https://github.com/Chenchao981/data-studio.git F:\DataStudio
+cd F:\DataStudio
+.\setup.ps1
+.\packaging\fetch_engines.ps1
+.\.venv-cpython\Scripts\python.exe packaging/prepare_engines.py --source-only
+.\.venv-cpython\Scripts\python.exe -m pytest -q
+.\packaging\build.ps1 -SkipArchive
+.\启动DataStudio.bat
+```
+
+计算组件从本私有仓库 Release 下载，下载账户须有仓库读取权限。`engine-release.json` 固定资产版本及 SHA-256；应用运行不依赖 GitHub 或 PYMS。原 CP/FT 工具包的固定哈希在 `engine-pins.json`，不可用未知版本替换。
+
+## 代码结构
+
+| 目录 | 用途 |
+| --- | --- |
+| `apps/web` | React 界面 |
+| `apps/desktop` | Qt 桌面入口 |
+| `python_core` | 本地任务、历史、文件、引擎调度 |
+| `engine_support` | 独立维护的离线计算适配器与数据契约 |
+| `packaging` | 环境、引擎、校验和 Windows 打包 |
+| `tests` | 工作台回归与真实数据验证工具 |
+| `environments` | 固定依赖版本 |
+
+`engine_support/backend/app` 和 `engine_support/local_agent` 保留历史导入名，但仅包含本地计算需要的模块，不包含 PYMS 网页/API 服务或数据库部署。导出来源见 `engine_support/SOURCE_FILES.json`。
+
+## 维护边界
+
+迁移说明与手动关联规则见 [独立项目说明](docs/STANDALONE-PROJECT.md)。其余早期设计和验证文档保留历史背景，其中旧目录/版本是当时的记录；当前启动、安装和构建以本 README 为准。

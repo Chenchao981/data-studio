@@ -1,0 +1,2 @@
+# Compatibility entry; canonical desktop and shared pins live in environments/.
+-r environments/studio.lock

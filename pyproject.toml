@@ -1,0 +1,3 @@
+[tool.pytest.ini_options]
+testpaths = ["tests", "engine_support/desktop_client/tests"]
+pythonpath = [".", "engine_support", "engine_support/backend", "engine_support/desktop_client"]
