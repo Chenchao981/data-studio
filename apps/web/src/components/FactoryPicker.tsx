@@ -15,7 +15,7 @@ export function FactoryPicker({factories,selected,onSelect}:{factories:Factory[]
  const current=factories.find(f=>f.code===selected);
  return <section className="factory-browser" aria-labelledby="factory-title">
   <header className="factory-toolbar">
-   <div className="factory-title"><span className="factory-title-icon"><Building2 size={19}/></span><div><h3 id="factory-title">选择工厂 <span>{factories.length} 家</span></h3><p>先选工厂，再选择对应功能</p></div></div>
+   <div className="factory-title"><span className="factory-title-icon"><Building2 size={19}/></span><div><h3 id="factory-title">选择工厂 <span>{factories.length} 家</span></h3></div></div>
    <div className="factory-current"><span>当前</span><strong>{current?.name||'未选择'}</strong></div>
    <div className="factory-search"><Search size={16}/><input aria-label="搜索工厂" placeholder="搜索工厂名称 / 拼音" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape')setQuery('');}}/>{query&&<button aria-label="清空工厂搜索" onClick={()=>setQuery('')}><X size={14}/></button>}</div>
   </header>
