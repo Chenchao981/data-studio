@@ -1,5 +1,7 @@
 # Desktop Data Studio 实施规划
 
+> 历史设计记录：保留原日期和当时行为。当前 0.3.3 已移除生产界面的演示入口及 Excel/CSV 预览；启动列表为空。当前操作以 [README](../README.md)、[交接](HANDOFF-2026-10-29.md) 和 [测试入口](TEST-ENTRYPOINTS.md) 为准，以下不是当前功能承诺。
+
 2026-10-23 · 以本次用户提供任务书为准。独立原型，现有 `desktop_client` 及 CP/FT 生产工程保持可用。
 
 运行环境决定：根据本轮追加指示，使用官方 CPython 3.13.17 + 项目专用 `.venv-cpython`；依赖由pip安装并锁定，不使用Anaconda作为新工作台的开发/打包基底。原Anaconda不卸载、不升级。此前Anaconda原型环境仅留作诊断，不参与正式M0构建。

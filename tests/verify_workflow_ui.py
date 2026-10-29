@@ -1,7 +1,7 @@
 """Actual Qt/React workflow, large-input interaction and private real samples.
 
 The OS file picker return is controlled by this test; processing, drag/drop,
-QWebChannel, queue, preview, export and history are the real implementations.
+QWebChannel, queue, folder-only results, export and history are real implementations.
 """
 import argparse
 import json
@@ -17,10 +17,14 @@ sys.path.insert(0,str(PROJECT))
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--cp',type=Path,required=True)
-    parser.add_argument('--ft',type=Path,required=True)
+    parser.add_argument('--cp',type=Path)
+    parser.add_argument('--cp-tool',default='LOCAL_CP_HUAHONG_TD_V1')
+    parser.add_argument('--ft',type=Path)
     parser.add_argument('--layout-only',action='store_true')
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
+    if not args.layout_only and (not args.cp or not args.ft):parser.error('--cp and --ft are required unless --layout-only is used')
+    from apps.desktop.rendering import configure_rendering
+    configure_rendering('software')
     from PySide6.QtCore import Qt,QPointF,QMimeData,QUrl
     from PySide6.QtGui import QDropEvent
     from PySide6.QtTest import QTest
@@ -29,10 +33,10 @@ def main():
     register_scheme();app=QApplication([])
     from apps.desktop.shell import StudioWindow
     w=StudioWindow(args.output/'workspace',PROJECT/'apps/web/dist')
-    with w.core.connect() as con:
-        for i in range(997):
-            row=dict(id=f'bench-{i}',name=f'INPUT_{i:04d}.xlsx',path=f'C:/benchmark/INPUT_{i:04d}.xlsx',size=1024,kind='UNKNOWN',demo=False,folder=False)
-            con.execute('INSERT OR REPLACE INTO sources VALUES (?,?)',(row['id'],json.dumps(row)))
+    fixture=args.output/'layout-inputs';fixture.mkdir()
+    fixture_paths=[]
+    for i in range(100):
+        path=fixture/f'INPUT_{i:04d}.xlsx';path.write_text('layout-only fixture',encoding='utf8');fixture_paths.append(path.resolve())
     exports=args.output/'selected-output';exports.mkdir(exist_ok=True);w.core.set_output_directory(str(exports.resolve()))
     w.resize(1440,960);w.show()
     def wait(fn,timeout=40):
@@ -45,7 +49,7 @@ def main():
     def js(code):
         result=[];w.page.runJavaScript(code,result.append);wait(lambda:bool(result));return result[0]
     def click(text):
-        assert js("(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==="+json.dumps(text)+");if(!b||b.disabled)return false;b.click();return true})()"),text
+        wait(lambda:js("(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==="+json.dumps(text)+");if(!b||b.disabled)return false;b.click();return true})()"))
     def selector(query):
         assert js("(()=>{let b=document.querySelector("+json.dumps(query)+");if(!b||b.disabled)return false;b.click();return true})()"),query
     def key(code):
@@ -59,6 +63,13 @@ def main():
         w.grab().save(str(args.output/name))
     evidence={'checks':[]}
     try:
+        wait(lambda:js('!!document.querySelector("#input-paths")'))
+        assert js('document.querySelectorAll(".file-table tbody tr").length')==0
+        from apps.desktop import input_sources
+        original=input_sources.select_input_sources
+        input_sources.select_input_sources=lambda *a,**k:tuple(fixture_paths)
+        try:click('选择数据源');wait(lambda:js('document.querySelectorAll(".file-table tbody tr").length')==50)
+        finally:input_sources.select_input_sources=original
         wait(lambda:js('document.querySelectorAll(".file-table tbody tr").length')==50)
         js('window.uiErrors=[];window.addEventListener("error",e=>window.uiErrors.push(e.message))')
         js('window.samples=[];window.done=false;(async()=>{for(let i=0;i<20;i++){let s=performance.now();document.querySelector(`[data-stage="${i%2?"CP":"FT"}"]`).click();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));window.samples.push(performance.now()-s)}window.done=true})()')
@@ -66,11 +77,10 @@ def main():
         evidence.update(stageSwitchMs=json.loads(js('JSON.stringify(window.samples)')),domNodes=js('document.querySelectorAll("*").length'),renderedInputs=js('document.querySelectorAll(".file-table tbody tr").length'))
         assert js('document.querySelectorAll("select").length')==0
         shot('workspace.png')
-        selector('[aria-label="选择本页输入"]');click('下一页');selector('[aria-label="选择本页输入"]');click('下一页');selector('[aria-label="选择本页输入"]')
+        click('取消勾选');selector('[aria-label="选择本页输入"]');click('下一页');selector('[aria-label="选择本页输入"]')
         assert js('document.querySelector(".file-panel .panel-bottom").innerText.includes("已选 100 项")')
-        assert js('document.body.innerText.includes("每次最多选择100项")')
-        click('清空选择')
-        evidence['checks'].append('997 inputs, bounded 50-row DOM, cross-page selection limited to 100')
+        click('取消勾选')
+        evidence['checks'].append('Startup empty; explicit import of 100 fixtures, bounded 50-row DOM and cross-page selection')
         selector('[data-stage=FT]')
         wait(lambda:js('document.querySelector("[data-stage=FT]").getAttribute("aria-pressed")==="true"'))
         selector('[data-factory=DIANJI]')
@@ -82,7 +92,7 @@ def main():
                 assert js('document.documentElement.scrollWidth<=window.innerWidth')
             selector('button[title="切换明暗主题"]');wait(lambda:js('document.documentElement.dataset.theme==="dark"'));shot('workspace-dark.png')
         else:
-            selector('[data-stage=CP]');selector('[data-tool=LOCAL_CP_HUAHONG_TD_V1]')
+            selector('[data-stage=CP]');selector('[data-factory=HUAHONG]');selector('[data-tool='+args.cp_tool+']')
             from apps.desktop import input_sources
             original=input_sources.select_input_sources
             input_sources.select_input_sources=lambda *a,**k:(args.cp.resolve(),)
@@ -93,17 +103,10 @@ def main():
             wait(lambda:w.core.task(cp_id)['status'] in {'SUCCESS','FAILED'},600)
             assert w.core.task(cp_id)['status']=='SUCCESS',w.core.task(cp_id)['error']
             wait(lambda:js('[...document.querySelectorAll("button")].some(b=>b.textContent.trim()==="查看结果")'))
-            click('查看结果');wait(lambda:js('document.querySelectorAll(".ag-row").length')>0)
-            selector('[aria-label="结果工作表"]');wait(lambda:js('document.querySelectorAll("[role=option]").length')>0);shot('worksheet-picker.png')
-            wait(lambda:js('document.activeElement.getAttribute("aria-label")==="搜索结果工作表"'))
-            key(Qt.Key.Key_Escape)
-            wait(lambda:js('document.querySelector("[aria-label=结果工作表]").getAttribute("aria-expanded")==="false"'))
-            selector('[aria-label="结果工作表"]');js('document.querySelectorAll("[role=option]")[1].click()');wait(lambda:js('document.querySelectorAll(".ag-row").length')>0)
-            # Filter through React's native value setter, then submit the form.
-            js('(()=>{const e=document.querySelector("[aria-label=搜索真实结果]");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(e,"NO_MATCH_837459");e.dispatchEvent(new Event("input",{bubbles:true}))})()')
-            js('document.querySelector("form.inline-search").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}))')
-            wait(lambda:js('document.querySelector(".preview-panel .panel-bottom").innerText.startsWith("0 行")'))
-            evidence['checks'].append('CP TD real clean, worksheet switch, Escape and full-sheet search')
+            click('已完成');click('查看结果');wait(lambda:js('!!document.querySelector(".result-directory")'))
+            assert not js('!!document.querySelector(".ag-root, .preview-panel")')
+            shot('cp-result.png')
+            evidence['checks'].append('Real CP cleaning and folder-only results without preview')
             click('← 返回历史');click('新建清洗');selector('[data-stage=FT]');selector('[data-factory=JIEMIN]');selector('[data-tool=LOCAL_FT_JIEMIN_FT_ALL_V1]')
             mime=QMimeData();mime.setUrls([QUrl.fromLocalFile(str(args.ft.resolve()))])
             w.view.dropEvent(QDropEvent(QPointF(300,300),Qt.DropAction.CopyAction,mime,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier))
@@ -111,9 +114,10 @@ def main():
             click('开始清洗');wait(lambda:len(w.core.history())==2);ft_id=w.core.history()[0]['id']
             wait(lambda:w.core.task(ft_id)['status'] in {'SUCCESS','FAILED'},600)
             assert w.core.task(ft_id)['status']=='SUCCESS',w.core.task(ft_id)['error']
+            click('历史记录')
             selector('[aria-label="历史测试阶段"] button:last-child')
             wait(lambda:js('document.querySelectorAll(".history-list article").length')==1)
-            click('查看结果');wait(lambda:js('document.querySelectorAll(".ag-row").length')>0);shot('ft-result.png')
+            click('查看结果');wait(lambda:js('!!document.querySelector(".result-directory")'));shot('ft-result.png')
             selector('[aria-label="选择分析任务"]');wait(lambda:js('document.querySelectorAll("[role=option]").length')==2)
             key(Qt.Key.Key_Escape)
             exported=args.output/'exported.zip';original=QFileDialog.getSaveFileName

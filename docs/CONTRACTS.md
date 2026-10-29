@@ -1,5 +1,7 @@
 # UI 与 Python 接口合同 · M1
 
+> 历史设计记录：保留原日期和当时行为。当前 0.3.3 已移除生产界面的演示入口及 Excel/CSV 预览；启动列表为空。当前操作以 [README](../README.md)、[交接](HANDOFF-2026-10-29.md) 和 [测试入口](TEST-ENTRYPOINTS.md) 为准，以下不是当前功能承诺。
+
 ## M1 已实现增量（以下优先于历史 M0 约定）
 
 - `bootstrap` 增加 `engines`：就绪状态、版本与工厂操作清单；`createTask(sourceId, sourceIds, toolCode)` 对真实输入必须显式选择已启用规则。只接受已由 Qt 登记的输入 ID，不接受前端传入任意路径。源目录与工作区不能互相包含。

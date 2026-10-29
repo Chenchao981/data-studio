@@ -21,6 +21,8 @@
 
 本地证据：`build/installer-validation/0b401f09/evidence.json` 及其 `ui/` 子目录；回归命令见 `tests/verify_installer.py`。本次只调整版本显示及发布流程，前端构建通过，简洁工作区与渲染相关的 7 项回归通过，计算规则未改动。
 
+2026-10-29 证据整理补充：以上回执、UI 截图和构建日志的校验副本已保存到 `local-evidence/2026-10-29/baseline-and-p0-2/baseline/installer/` 及同级日志文件，来源与 SHA-256 见该归档根目录 `archive-manifest.json`。复制归档不表示重新运行安装生命周期；详见 [本地证据](LOCAL-EVIDENCE.md)。
+
 ## 后续发布
 
 先准备并验证新的 `dist/DesktopDataStudio`，更新应用版本后执行 `packaging/publish.ps1`。安装文件按版本存放，脚本不会覆盖已经存在的版本目录。固定组件的每个文件都会核验，校验值和来源提交写入版本回执。

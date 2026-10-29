@@ -31,7 +31,7 @@
 
 ## 同日统一环境补充
 
-后续同日环境统一补充：新工作台开发环境已安装 `environments/studio.lock`，与服务器共享41个计算依赖。版本检查、14项Python测试及真实Qt复测通过（本轮单次冷预览594ms、最大心跳间隔204ms）。真实CP/FT引擎在独立验证流程中完成34场景对账，但尚未接入M0界面；详见[统一环境验证](../../docs/validation/RUNTIME_UNIFICATION_2026-10-23.md)。
+后续同日环境统一补充：新工作台开发环境已安装 `environments/studio.lock`，与服务器共享41个计算依赖。版本检查、14项Python测试及真实Qt复测通过（本轮单次冷预览594ms、最大心跳间隔204ms）。真实CP/FT引擎在独立验证流程中完成34场景对账，但尚未接入M0界面；详见迁移前仓库的 `docs/validation/RUNTIME_UNIFICATION_2026-10-23.md`（未随本项目迁移，不能当作本仓库可执行入口）。
 
 当前便携交付文件 `dist/DesktopDataStudio-M0-20261023-unified.zip`，SHA256 `a7b2901faf079bd466e75445354693b1b8404ef3373e4166df43257f0b0b253e`。本轮更新包内开发说明，EXE业务代码与此前通过验证的CPython包相同；M0不携带真实计算引擎。
 

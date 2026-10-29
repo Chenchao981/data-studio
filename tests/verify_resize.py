@@ -9,6 +9,9 @@ def main():
     if a.software:
         os.environ['QTWEBENGINE_CHROMIUM_FLAGS']='--disable-gpu'
         os.environ['QT_QUICK_BACKEND']='software'
+    if a.charts:p.error('--charts used a removed demo UI; use verify-cp-charts.mjs with a real CP Cockpit URL')
+    from apps.desktop.rendering import configure_rendering
+    configure_rendering('software' if a.software else 'auto')
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication
     from apps.desktop.security import register_scheme
@@ -37,8 +40,6 @@ def main():
         pump(3);assert js('!!document.querySelector("#input-paths")')
         if a.home:
             click('历史记录');wait_js("[...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='查看结果')");click('查看结果');wait_js("!!document.querySelector('.result-directory')")
-        if a.charts:
-            click('清洗结果');click('演示数据');click('演示统计');wait_js("document.querySelectorAll('.chart-canvas canvas').length===2")
         js('window.resizeSentinel=123;window.gaps=[];window.last=performance.now();window.watch=setInterval(()=>{let n=performance.now();gaps.push(n-last);last=n},20)')
         start=time.perf_counter();blank=[];durations=[]
         for i in range(100):
@@ -54,8 +55,6 @@ def main():
             actual=w.windowHandle().screen();assert actual==screen,(actual.name(),screen.name())
             screens.append(dict(name=screen.name(),dpi=screen.logicalDotsPerInch(),dpr=screen.devicePixelRatio(),actualWindowScreen=actual.name(),actualWindowDpr=w.devicePixelRatioF()))
         pump(.4);gaps=json.loads(js('clearInterval(window.watch);JSON.stringify(window.gaps)'))
-        if a.charts:
-            sizes=json.loads(js("JSON.stringify([...document.querySelectorAll('.chart-canvas')].map(e=>({host:e.clientWidth,canvas:e.querySelector('canvas').getBoundingClientRect().width})))"));assert all(abs(i['host']-i['canvas'])<2 for i in sizes),sizes
         assert js('window.resizeSentinel===123'), 'Resize must not reload the interface'
         w.grab().save(str(a.output/'window.png'))
         result=dict(software=a.software,resize100seconds=time.perf_counter()-start,maxQtCycleMs=max(durations),maxJsGapMs=max(gaps),blankSamples=sum(blank),crashes=list(crashes),screens=screens)

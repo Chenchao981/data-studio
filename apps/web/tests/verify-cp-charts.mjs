@@ -1,4 +1,5 @@
 // Exercise the real local CP Cockpit, including rendered Plotly figures.
+// Fixture-specific: one lot, 25 wafers, 13 parameters, VTH and Wafer 2.
 import {chromium} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
 const [url,output]=process.argv.slice(2);

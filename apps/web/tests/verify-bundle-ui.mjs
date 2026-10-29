@@ -1,12 +1,13 @@
 // Actual frozen Windows client through its temporary, loopback-only Qt CDP port.
 // Seed a private workspace with a completed real task before running.
 // Inputs are intentionally cleared at each application startup.
-// Usage: node tests/verify-bundle-ui.mjs <exe> <private-home> <evidence-directory>
+// Usage from repository root: node apps/web/tests/verify-bundle-ui.mjs <exe> <private-home-with-one-successful-Jiemin-DVDS> <evidence-directory>
 import {spawn,execFile} from 'node:child_process';
 import {mkdir,writeFile} from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 
+if(process.argv.length!==5)throw Error('Usage: node apps/web/tests/verify-bundle-ui.mjs <exe> <private-home-with-one-successful-Jiemin-DVDS> <new-evidence-directory>');
 const [exe,home,output]=process.argv.slice(2).map(p=>path.resolve(p));
 await mkdir(output,{recursive:true});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
@@ -86,13 +87,15 @@ try{
  await evaluate(`[...document.querySelectorAll('.sidebar button')].find(b=>b.textContent.trim()==='任务进度').click()`);
  await wait(`!!document.querySelector('.task-log')`);
  await button('历史记录');
- const realResult=`[...document.querySelectorAll('.history-list article')].flatMap(a=>[...a.querySelectorAll('button')]).find(b=>b.textContent.trim()==='查看结果')`;
+ const dvdsHistory=`[...document.querySelectorAll('.history-list article')].filter(a=>a.textContent.includes('上海捷敏')&&a.textContent.includes('DVDS'))`;
+ const realResult=`(${dvdsHistory}).flatMap(a=>[...a.querySelectorAll('button')]).find(b=>b.textContent.trim()==='查看结果')`;
  await wait(`!!(${realResult})`);
+ if(await evaluate(`(${dvdsHistory}).length`)!==1)throw Error('Seed exactly one successful Jiemin DVDS task in this private home');
  // Measure UI stalls during the real workload separately from engine duration.
  const workloadStarted=Date.now();
  await evaluate(`window.workloadDelays=[];window.workloadTasks=[];window.workloadLast=performance.now();window.workloadTimer=setInterval(()=>{const n=performance.now();if(workloadDelays.length<10000)workloadDelays.push(Math.max(0,n-workloadLast-100));workloadLast=n;},100);window.workloadObserver=new PerformanceObserver(list=>{for(const e of list.getEntries())if(workloadTasks.length<2000)workloadTasks.push(e.duration)});workloadObserver.observe({type:'longtask'});`);
  // Re-run the single, previously verified real DVDS sample in the isolated home.
- await button('重新执行');
+ await evaluate(`[...(${dvdsHistory})[0].querySelectorAll('button')].find(b=>b.textContent.trim()==='重新执行').click()`);
  await wait(`!!document.querySelector('.task-log')`);
  await wait(`[...document.querySelectorAll('.history-filters button')].some(b=>b.textContent==='处理中'&&b.getAttribute('aria-pressed')==='true')`);
  await wait(`document.querySelector('.log-stream')?.textContent.includes('上海捷敏 DVDS：读取')`,120000);

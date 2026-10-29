@@ -1,12 +1,13 @@
 // Actual frozen Windows client through its temporary, loopback-only Qt CDP port.
 // Seed a private workspace with a completed real task before running.
 // Inputs are intentionally cleared at each application startup.
-// Usage: node tests/verify-bundle-ui.mjs <exe> <private-home> <evidence-directory>
+// Usage from repository root: node apps/web/tests/verify-huahong-pat-ui.mjs <exe> <private-home> <evidence-directory>
 import {spawn,execFile} from 'node:child_process';
 import {mkdir,writeFile} from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 
+if(process.argv.length!==5)throw Error('Usage: node apps/web/tests/verify-huahong-pat-ui.mjs <exe> <private-home-with-one-successful-HuaHong-PAT> <new-evidence-directory>');
 const [exe,home,output]=process.argv.slice(2).map(p=>path.resolve(p));
 await mkdir(output,{recursive:true});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
@@ -58,8 +59,11 @@ try{
  if(!await evaluate(`document.body.innerText.includes('同一产品汇总计算并输出一个PAT Excel')`))throw Error('Product aggregation help missing');
  await screenshot('huahong-raw-pat');
  await button('历史记录');
- await button('查看结果');
- await wait(`document.body.innerText.includes('CP data 20261019') && document.body.innerText.includes('打开结果文件夹')`);
+ const patHistory=`[...document.querySelectorAll('.history-list article')].filter(a=>a.textContent.includes('FT口径')&&[...a.querySelectorAll('button')].some(b=>b.textContent.trim()==='查看结果'))`;
+ await wait(`(${patHistory}).length>0`);
+ if(await evaluate(`(${patHistory}).length`)!==1)throw Error('Use a private home with exactly one successful HuaHong raw PAT task');
+ await evaluate(`[...(${patHistory})[0].querySelectorAll('button')].find(b=>b.textContent.trim()==='查看结果').click()`);
+ await wait(`!!document.querySelector('.result-directory') && document.body.innerText.includes('打开结果文件夹')`);
  if(await evaluate(`!!document.querySelector('.ag-root') || calls.includes('getPreview')`))throw Error('Spreadsheet preview loaded');
  await screenshot('huahong-pat-result');
  if(errors.length)throw Error(JSON.stringify(errors));

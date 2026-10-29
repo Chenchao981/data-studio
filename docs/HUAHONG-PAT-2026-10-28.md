@@ -55,10 +55,10 @@
 保留原有后端、CP/FT 包和 Python 环境基线。标准全量构建也生成同一版本。
 本次只替换已安装客户端的产品汇总适配器、入口说明及 manifest；原文件保存在验证目录的 bundle-backup。
 
-验证命令：
+验证命令（2026-10-29 按独立项目根目录更新路径；以上业务验收仍是原日期记录）：
 
 ```text
-python -m pytest desktop_client/tests/test_local_native.py desktop_client/tests/test_huahong_ft_pat.py -q
-python desktop-data-studio/packaging/validate_huahong_pat.py <原始ZIP目录> <结果目录> <校验回执.json> --manifest <内部任务/PAT_source_manifest.json>
-node desktop-data-studio/apps/web/tests/verify-huahong-pat-ui.mjs <已安装exe> <仅含本次已完成任务的测试工作区> <截图目录>
+.\.venv-cpython\Scripts\python.exe -m pytest engine_support/desktop_client/tests/test_local_native.py engine_support/desktop_client/tests/test_huahong_ft_pat.py -q
+.\.venv-cpython\Scripts\python.exe packaging/validate_huahong_pat.py <原始ZIP目录> <结果目录> <校验回执.json> --manifest <内部任务/PAT_source_manifest.json>
+node apps/web/tests/verify-huahong-pat-ui.mjs <已安装exe> <仅含本次已完成任务的测试工作区> <截图目录>
 ```

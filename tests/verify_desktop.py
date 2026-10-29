@@ -18,6 +18,8 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=PROJECT/"artifacts/desktop")
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
+    from apps.desktop.rendering import configure_rendering
+    configure_rendering('software')
     from PySide6.QtCore import QUrl, QMimeData, QPointF, Qt
     from PySide6.QtGui import QDropEvent
     from PySide6.QtWidgets import QApplication, QMessageBox
@@ -95,6 +97,9 @@ def main():
         window.view.dropEvent(event)
         wait(lambda:len(window.core.files())>=103)
         assert event.isAccepted()
+        # Registration completes before React handles studio-imported. Wait for
+        # that update before navigating, otherwise it can reopen the workbench.
+        wait(lambda:js('document.querySelectorAll(".file-table tbody tr").length===50 && document.querySelector(".file-panel .panel-bottom")?.textContent.includes("已选 100 项")'))
         evidence["checks"].append("100 local inputs registered by Qt drop; contents unchanged")
         js("window.heartbeat=[];window.lastBeat=performance.now();window.heartbeatTimer=setInterval(()=>{window.heartbeat.push(performance.now()-window.lastBeat);window.lastBeat=performance.now()},25)")
         click("清洗结果")

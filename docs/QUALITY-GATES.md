@@ -38,10 +38,12 @@ JETECH 的中文名称固定为“佳泰”，拼音 `jiatai`，简称 JT。内�
 在仓库根目录执行（输出目录每次使用新名字）：
 
 ```powershell
-node desktop-data-studio/apps/web/tests/measure-ui-performance.mjs <客户端exe> <独立证据目录> --strict
-desktop-data-studio/.venv-cpython/Scripts/python.exe desktop-data-studio/tests/verify_factory_ui.py --output <20家工厂证据目录>
-desktop-data-studio/.venv-cpython/Scripts/python.exe desktop-data-studio/tests/verify_resize.py --software --output <窗口证据目录>
-node desktop-data-studio/apps/web/tests/verify-bundle-ui.mjs <客户端exe> <含真实完成任务的独立home> <工作流证据目录>
+node apps/web/tests/measure-ui-performance.mjs <客户端exe> <独立证据目录> --strict
+.\.venv-cpython\Scripts\python.exe tests/verify_factory_ui.py --output <20家工厂证据目录>
+.\.venv-cpython\Scripts\python.exe tests/verify_resize.py --software --output <窗口证据目录>
+node apps/web/tests/verify-bundle-ui.mjs <客户端exe> <含一项成功上海捷敏DVDS任务的独立home> <工作流证据目录>
 ```
 
 `--strict` 在超出启动/交互预算时返回失败；不带参数可用于采集旧版对照，超标回执为 REVIEW。测试不得关闭用户正在处理的任务。未发现性能退步时保留有用设计，不为“优化”引入新的复杂度。
+
+各脚本的输入、样本限制和最新运行状态见 [测试入口](TEST-ENTRYPOINTS.md)。本地证据统一保存在 `local-evidence/`；历史证据归档与当前复测分别列明，不能把复制历史回执称为重新验收。
