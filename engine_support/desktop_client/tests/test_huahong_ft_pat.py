@@ -10,8 +10,9 @@ import zipfile
 import openpyxl
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-KIT = ROOT / 'desktop-data-studio/engines'
+ROOT = Path(__file__).resolve().parents[3]
+KIT = ROOT / 'engines'
+SUPPORT = ROOT / 'engine_support'
 pytestmark = pytest.mark.skipif(not (KIT / 'runtime/python.exe').exists(), reason='pinned local runtime required')
 
 
@@ -39,13 +40,13 @@ def run(folder, out):
     env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8',
            'STUDIO_FT_PAT_PACKAGE': str(package), 'STUDIO_FT_PAT_SHA256': hashlib.sha256(package.read_bytes()).hexdigest()}
     return subprocess.run([str(KIT / 'runtime/python.exe'), '-s', '-B',
-        str(ROOT / 'desktop_client/nce_desktop/local_native_worker.py'), str(KIT / 'packages/cp.pyz'),
+        str(SUPPORT / 'desktop_client/nce_desktop/local_native_worker.py'), str(KIT / 'packages/cp.pyz'),
         'LOCAL_CP_HUAHONG_RAW_PAT_V1', json.dumps([str(folder)]), str(out)],
         env=env, encoding='utf-8', capture_output=True, timeout=90)
 
 
 def test_product_name_and_complete_batch_are_explicit():
-    sys.path.insert(0, str(ROOT / 'desktop_client'))
+    sys.path.insert(0, str(SUPPORT / 'desktop_client'))
     from nce_desktop.local_cp_pat import parse_batch_name
     assert parse_batch_name('NCEVTG120EV60DA_FA69-9491@203') == ('NCEVTG120EV60DA', 'FA69-9491', '203')
     with pytest.raises(ValueError, match='批次名称'):
