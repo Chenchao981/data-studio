@@ -1,6 +1,6 @@
 # 独立项目测试入口
 
-更新：2026-10-29，应用 0.3.3，固定引擎 `studio-engine-20261029.1`。所有命令从 `F:\DataStudio` 执行，Python 使用 `.\.venv-cpython\Scripts\python.exe`。先按 README 准备固定环境、完整 `engines/` 和 `apps/web/dist/`。测试所用路径必须是新的独立目录，禁止使用正常个人历史做验证。
+更新：2026-10-29，当前界面版本 0.3.4，固定引擎 `studio-engine-20261029.1`。所有命令从 `F:\DataStudio` 执行，Python 使用 `.\.venv-cpython\Scripts\python.exe`。先按 README 准备固定环境、完整 `engines/` 和 `apps/web/dist/`。测试所用路径必须是新的独立目录，禁止使用正常个人历史做验证。
 
 迁移前 PLAN、CONTRACTS 与早期 VALIDATION 文档保留当时的日期、版本、统计和预览行为；它们不是当前操作手册。当前生产界面启动输入为空，只使用真实输入，结果为文件夹概要，Excel/CSV 由外部查看。本地图表仍可独立显示数据与图形，不等于恢复 APP 的 Excel 预览。
 
@@ -18,6 +18,7 @@
 | `verify_ft_ui.py` | `--source <上海捷敏DVDS文件> --output <新目录>` | DC/DVDS/RG/PAT 菜单、真实 DVDS、实时日志、CP/FT 草稿隔离及重启历史；不是通用 FT 样本入口 |
 | `verify_cp_restore_ui.py` | `--home <仅有一项成功CP清洗的私有home> --output <新目录>` | 三 CSV 导出哈希、打开文件夹、CP Cockpit HTTP 就绪、会话复用与退出清理；绘图另测，不硬编码 3,875 条 |
 | `verify_factory_ui.py` | `--output <新目录>` | 每阶段20家虚拟工厂布局、键盘、筛选、主题和搜索时延；无业务任务，不改磁盘引擎目录 |
+| `verify_operation_ui.py` | `--output <新目录>` | 当前10家工厂全部可选功能、44px按钮、选中不跳动、明暗主题及1440/920窗口；检查重复说明已移除，操作要求保留在按钮悬停提示 |
 | `verify_resize.py` | `--software --output <新目录>`；可加 `--recovery` 或 `--home <成功任务home>` | 原生 resize、最大化/还原、可用屏幕、黑屏采样、渲染故障恢复；`--charts` 原依赖演示图表，现明确拒绝并指向真实 Cockpit 脚本 |
 | `verify_installer.py` | `<Setup.exe> --home <成功华虹PAT私有home>` | 实际安装/覆盖/卸载，会操作测试安装注册项与快捷方式；只在无正式安装的受控机器执行；本轮只审核和保留旧证据 |
 
@@ -39,6 +40,6 @@
 node apps/web/tests/verify-huahong-pat-ui.mjs dist/DesktopDataStudio/DesktopDataStudio.exe <华虹PAT私有home> local-evidence/<新目录>/pat-ui
 ```
 
-前端源码变更后另运行 `npm run build`（工作目录 `apps/web`）。本轮只修改文档和验证脚本，没有修改前端或重建发布包。
+前端源码变更后另运行 `npm run build`（工作目录 `apps/web`）。P0-3审核当时只修改文档和验证脚本；后续0.3.4功能按钮与工作台简化的构建/验证另见 [0.3.4发布记录](RELEASE-0.3.4.md)。
 
 真实引擎路径与数据对账另见 [P0-2](VALIDATION-KIT-SPAWN-20261029.md)；`run_standalone_smoke.py --kit`、`verify_real.py --matrix`、`verify_ft_reference.py`、`verify_jiemin_dynamic_contract.py` 和 reconcile 辅助脚本均需按 `--help` 提供私人样本/矩阵，帮助或语法通过不等于业务计算通过。UI 入口本轮实际结果见 [迁移审核](VALIDATION-MIGRATION-20261029.md)，证据保留规则见 [本地证据](LOCAL-EVIDENCE.md)。

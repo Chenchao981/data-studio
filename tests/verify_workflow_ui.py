@@ -125,8 +125,10 @@ def main():
             try:click('完整归档ZIP');wait(exported.exists,60)
             finally:QFileDialog.getSaveFileName=original
             from python_core.engine import digest
-            wait(lambda:exported.stat().st_size==Path(w.core.task(ft_id)['output']).stat().st_size)
-            assert digest(exported)==w.core.task(ft_id)['sha256']
+            def export_complete():
+                try:return digest(exported)==w.core.task(ft_id)['sha256']
+                except OSError:return False  # The asynchronous writer may still own the file.
+            wait(export_complete,60)
             selector('button[title="切换明暗主题"]');wait(lambda:js('document.documentElement.dataset.theme==="dark"'));shot('ft-result-dark.png')
             from python_core.core import Core
             reopened=Core(w.core.root)
