@@ -4,6 +4,8 @@
 node_modules/
 engines/
 dist/
+release/*
+!release/README.md
 build/
 artifacts/*
 !artifacts/README.md

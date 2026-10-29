@@ -43,6 +43,10 @@ try{
  socket.onmessage=event=>{const r=JSON.parse(event.data);if(r.method==='Runtime.exceptionThrown')errors.push(r.params.exceptionDetails);if(!r.id)return;const p=pending.get(r.id);if(!p)return;pending.delete(r.id);clearTimeout(p.timer);r.error?p.reject(Error(JSON.stringify(r.error))):p.resolve(r.result);};
  await send('Runtime.enable');await send('Page.enable');
  await wait(`!!document.querySelector('#input-paths')`);
+ if(process.env.STUDIO_EXPECTED_VERSION&&!await evaluate(`document.querySelector('.version').textContent.includes(${JSON.stringify(process.env.STUDIO_EXPECTED_VERSION)})`))throw Error('Installed interface version differs from installer');
+ await click('[data-stage=FT]');
+ if(await evaluate(`document.querySelectorAll('[data-factory]').length`)<6)throw Error('FT factory catalog missing');
+ await click('[data-stage=CP]');
  await evaluate(`window.calls=[];const t=qt.webChannelTransport;const old=t.send.bind(t);t.send=raw=>{try{const m=JSON.parse(raw);if(m.args)calls.push(m.args[1]);}catch{}return old(raw);};`);
  await click('[data-stage=CP]');await click('[data-factory=HUAHONG]');
  const pat='[data-tool=LOCAL_CP_HUAHONG_RAW_PAT_V1]';

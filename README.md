@@ -13,7 +13,15 @@
 历史记录继续使用 `%LOCALAPPDATA%\NCE\DesktopDataStudio-M0`；原有清洗输出路径不变。
 同一工作区仅运行一个实例，计算任务串行排队。
 
-## 开发与构建
+## 用户端安装包
+
+用户安装包统一放在 [`release/`](release/README.md)，按应用版本分目录。
+运行 `packaging/publish.ps1`，会核验现有 Windows 发布目录和固定引擎，然后生成中文离线安装程序、安装使用说明、校验值和版本回执。
+需要从源代码重新构建时使用 `packaging/publish.ps1 -Rebuild`。
+
+安装包默认按当前用户安装，提供桌面/开始菜单快捷方式和 Windows 卸载入口；用户无需预装 Python、Anaconda 或 Node.js。个人历史、日志和清洗输出在升级或卸载时保留。
+
+## 开发环境
 
 Windows x64，先安装 Git/GitHub CLI 和 Node.js。Python 使用 `runtime-lock.json` 指定的官方 CPython，由脚本安装到项目内，依赖严格按 `environments/*.lock` 安装。
 
