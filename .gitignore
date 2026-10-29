@@ -11,6 +11,7 @@ artifacts/*
 !artifacts/README.md
 outputs/
 .engine-downloads/
+.remember/
 __pycache__/
 .pytest_cache/
 *.pyc

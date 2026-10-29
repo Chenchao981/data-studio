@@ -54,4 +54,6 @@ cd F:\DataStudio
 
 ## 维护边界
 
+新项目接续先读 [完整交接](docs/HANDOFF-2026-10-29.md) 和 [待办清单](docs/TODO.md)。本机 `.remember/remember.md` 是接续入口；交接文档和待办纳入 Git，个人接续文件仅保存在本地。
+
 迁移说明与手动关联规则见 [独立项目说明](docs/STANDALONE-PROJECT.md)。其余早期设计和验证文档保留历史背景，其中旧目录/版本是当时的记录；当前启动、安装和构建以本 README 为准。
