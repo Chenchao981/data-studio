@@ -18,7 +18,7 @@
 | `verify_ft_ui.py` | `--source <上海捷敏DVDS文件> --output <新目录>` | DC/DVDS/RG/PAT 菜单、真实 DVDS、实时日志、CP/FT 草稿隔离及重启历史；不是通用 FT 样本入口 |
 | `verify_cp_restore_ui.py` | `--home <仅有一项成功CP清洗的私有home> --output <新目录>` | 三 CSV 导出哈希、打开文件夹、CP Cockpit HTTP 就绪、会话复用与退出清理；绘图另测，不硬编码 3,875 条 |
 | `verify_factory_ui.py` | `--output <新目录>` | 每阶段20家虚拟工厂布局、键盘、筛选、主题和搜索时延；无业务任务，不改磁盘引擎目录 |
-| `verify_operation_ui.py` | `--output <新目录>` | 当前10家工厂全部可选功能、44px按钮、选中不跳动、明暗主题及1440/920窗口；检查重复说明已移除，操作要求保留在按钮悬停提示 |
+| `verify_operation_ui.py` | `--output <新目录>` | 当前10家工厂全部可选功能、42px按钮、选中不跳动、紧凑横排、明暗主题及1440/920窗口；检查重复说明已移除，操作要求保留在按钮悬停提示 |
 | `verify_resize.py` | `--software --output <新目录>`；可加 `--recovery` 或 `--home <成功任务home>` | 原生 resize、最大化/还原、可用屏幕、黑屏采样、渲染故障恢复；`--charts` 原依赖演示图表，现明确拒绝并指向真实 Cockpit 脚本 |
 | `verify_installer.py` | `<Setup.exe> --home <成功华虹PAT私有home>` | 实际安装/覆盖/卸载，会操作测试安装注册项与快捷方式；只在无正式安装的受控机器执行；本轮只审核和保留旧证据 |
 

@@ -10,6 +10,7 @@
 ## 本机使用
 
 双击根目录的 `启动DataStudio.bat`，优先运行 `dist/DesktopDataStudio/DesktopDataStudio.exe`。
+当前本机冻结程序为0.3.4，使用紧凑横排功能按钮并精简重复说明；详见 [0.3.4界面记录](docs/RELEASE-0.3.4.md)。该界面尚未重新发布用户安装包，现有0.3.3安装包仍保留。
 历史记录继续使用 `%LOCALAPPDATA%\NCE\DesktopDataStudio-M0`；原有清洗输出路径不变。
 同一工作区仅运行一个实例，计算任务串行排队。
 

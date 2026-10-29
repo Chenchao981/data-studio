@@ -48,7 +48,7 @@ def main():
 
     rows = []
     try:
-        wait(lambda: js('!!document.querySelector(".operation-row")'))
+        wait(lambda: js('!!document.querySelector(".operation-groups")'))
         js('window.uiErrors=[];window.addEventListener("error",e=>uiErrors.push(e.message))')
         for stage in ['CP', 'FT']:
             js(f'document.querySelector("[data-stage={stage}]").click()')
@@ -83,7 +83,9 @@ def main():
                     js('document.querySelector(".operation-card").click()')
                     settle()
                     assert js('document.documentElement.scrollWidth<=innerWidth')
-                    assert js('[...document.querySelectorAll(".operation-card")].every(e=>e.offsetHeight>=44&&e.offsetWidth>=112&&e.scrollWidth<=e.clientWidth+1)')
+                    assert js('[...document.querySelectorAll(".operation-card")].every(e=>e.offsetHeight>=42&&e.offsetWidth>=96&&e.scrollWidth<=e.clientWidth+1)')
+                    if width == 1440 and stage == 'CP':
+                        assert js('document.querySelector(".chooser-operation").offsetHeight<90')
                     assert not js('!!document.querySelector(".input-guide, .source-hint, .path-start, .path-field small")')
                     window.grab().save(str(args.output / f'{stage}-{width}-{theme}.png'))
         assert len(rows) >= 10
@@ -91,7 +93,7 @@ def main():
         assert not js('window.uiErrors.length')
         result = dict(status='PASS', factories=rows, tasksCreated=0,
                       checks=['Every enabled operation selectable', 'No layout shift on selection',
-                              '44px targets', 'Light/dark and 920px/1440px layouts', 'Repeated hints removed'])
+                              '42px targets and compact CP function row', 'Light/dark and 920px/1440px layouts', 'Repeated hints removed'])
         (args.output / 'evidence.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf8')
         print(json.dumps(result, ensure_ascii=False))
     finally:
