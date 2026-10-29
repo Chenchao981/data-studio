@@ -29,14 +29,14 @@ Windows x64，先安装 Git/GitHub CLI 和 Node.js。Python 使用 `runtime-lock
 git clone https://github.com/Chenchao981/data-studio.git F:\DataStudio
 cd F:\DataStudio
 .\setup.ps1
-.\packaging\fetch_engines.ps1
+# 先按下方说明准备经过校验的 engines 目录
 .\.venv-cpython\Scripts\python.exe packaging/prepare_engines.py --source-only
 .\.venv-cpython\Scripts\python.exe -m pytest -q
 .\packaging\build.ps1 -SkipArchive
 .\启动DataStudio.bat
 ```
 
-计算组件从本私有仓库 Release 下载，下载账户须有仓库读取权限。`engine-release.json` 固定资产版本及 SHA-256；应用运行不依赖 GitHub 或 PYMS。原 CP/FT 工具包的固定哈希在 `engine-pins.json`，不可用未知版本替换。
+计算组件属于外部固定构建输入，不随 Git 提交。新开发机器可从已验证安装包的安装目录复制 `engines/` 到项目根目录，再执行上面的 `prepare_engines.py --source-only`，按本仓库源代码刷新适配器。引擎清单固定全部文件的校验值，原 CP/FT 工具包的固定哈希在 `engine-pins.json`，不可用未知版本替换。用户端安装包已包含这些组件，运行不依赖 GitHub 或 PYMS。
 
 ## 代码结构
 

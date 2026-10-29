@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -33,18 +36,22 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("setup", type=Path)
     parser.add_argument("--home", type=Path, required=True, help="Private UI-test workspace containing a completed HuaHong PAT task")
+    parser.add_argument("--resume-token", help="Repeat an interrupted test only in its exact disposable installation")
     args = parser.parse_args()
-    if registration():
+    if args.resume_token and not re.fullmatch(r"[0-9a-f]{8}", args.resume_token):
+        raise ValueError("Invalid isolated-test token")
+    token = args.resume_token or uuid.uuid4().hex[:8]
+    install = Path(tempfile.gettempdir()).resolve() / f"DataStudio-UAT-{token} 安装验证"
+    existing = registration()
+    if existing and not (args.resume_token and Path(existing["InstallLocation"]).resolve() == install):
         raise RuntimeError("An installed Data Studio is already registered; this test will not replace it")
     desktop = Path(subprocess.check_output(["powershell.exe", "-NoProfile", "-Command", "[Environment]::GetFolderPath('Desktop')"], text=True).strip())
     shortcut = desktop / "Data Studio.lnk"
-    if shortcut.exists():
+    if shortcut.exists() and not (args.resume_token and existing):
         raise RuntimeError("A Data Studio shortcut already exists; preserve it before running this isolated test")
-    token = uuid.uuid4().hex[:8]
-    install = Path(tempfile.gettempdir()).resolve() / f"DataStudio-UAT-{token} 安装验证"
-    assert install.parent == Path(tempfile.gettempdir()).resolve() and not install.exists()
+    assert install.parent == Path(tempfile.gettempdir()).resolve() and (args.resume_token or not install.exists())
     output = ROOT / "build/installer-validation" / token
-    output.mkdir(parents=True)
+    output.mkdir(parents=True, exist_ok=bool(args.resume_token))
     personal = Path(os.environ["LOCALAPPDATA"]) / "NCE/DesktopDataStudio-M0"
     personal.mkdir(parents=True, exist_ok=True)
     sentinel = personal / f"installer-uat-{token}.keep"
@@ -61,9 +68,12 @@ def main():
         assert info["DisplayVersion"] == manifest["version"]
         assert shortcut.exists()
         assert (Path(os.environ["APPDATA"]) / "Microsoft/Windows/Start Menu/Programs/Data Studio/Data Studio.lnk").is_file()
-        for name, expected in manifest["files"].items():
+        def verify(item):
+            name, expected = item
             path = (install / name).resolve()
             assert path.is_relative_to(install) and digest(path) == expected, name
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            list(pool.map(verify, manifest["files"].items()))
         report["installedFilesVerified"] = len(manifest["files"])
         report["checks"].append("Actual installer, Chinese path, full payload hashes, HKCU registration and shortcuts")
         own_file = install / "user-added-file.keep"
@@ -74,7 +84,17 @@ def main():
         report["checks"].append("Reinstall preserves personal history sentinel and unowned installation file")
         print("Checking frozen installed application through local Qt interface", flush=True)
         subprocess.run(["node", str(ROOT / "apps/web/tests/verify-huahong-pat-ui.mjs"), str(install / "DesktopDataStudio.exe"), str(args.home.resolve()), str(output / "ui")], env={**os.environ, "STUDIO_EXPECTED_VERSION": manifest["version"]}, check=True, timeout=180)
-        report["ui"] = json.loads((output / "ui/evidence.json").read_text())
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.OpenProcess.restype = ctypes.c_void_p
+        kernel.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        kernel.CloseHandle.argtypes = [ctypes.c_void_p]
+        handle = kernel.OpenProcess(0x100000, False, int((output / "ui/pid.txt").read_text()))
+        if handle:
+            try:
+                assert kernel.WaitForSingleObject(handle, 30000) == 0, "Validation application did not close"
+            finally:
+                kernel.CloseHandle(handle)
+        report["ui"] = json.loads((output / "ui/evidence.json").read_text(encoding="utf8"))
         report["checks"].append("Installed EXE: isolated PATH, CP/FT navigation, HuaHong PAT, real history, no Excel preview")
         print("Uninstalling and checking retention", flush=True)
         subprocess.run([str(install / "Uninstall.exe"), "/S"], check=True, timeout=120)
