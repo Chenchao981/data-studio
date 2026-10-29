@@ -32,3 +32,4 @@ __pycache__/
 *.pem
 *.key
 *.pfx
+启动DataStudio原型.bat
