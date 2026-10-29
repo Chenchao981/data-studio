@@ -1,6 +1,6 @@
 # 独立项目测试入口
 
-更新：2026-10-29，当前界面版本 0.3.5，固定引擎 `studio-engine-20261029.1`。所有命令从 `F:\DataStudio` 执行，Python 使用 `.\.venv-cpython\Scripts\python.exe`。先按 README 准备固定环境、完整 `engines/` 和 `apps/web/dist/`。测试所用路径必须是新的独立目录，禁止使用正常个人历史做验证。
+更新：2026-10-29，当前界面版本 0.3.6，固定引擎 `studio-engine-20261029.2`。所有命令从 `F:\DataStudio` 执行，Python 使用 `.\.venv-cpython\Scripts\python.exe`。先按 README 准备固定环境、完整 `engines/` 和 `apps/web/dist/`。测试所用路径必须是新的独立目录，禁止使用正常个人历史做验证。
 
 迁移前 PLAN、CONTRACTS 与早期 VALIDATION 文档保留当时的日期、版本、统计和预览行为；它们不是当前操作手册。当前生产界面启动输入为空，只使用真实输入，结果为文件夹概要，Excel/CSV 由外部查看。本地图表仍可独立显示数据与图形，不等于恢复 APP 的 Excel 预览。
 
@@ -33,7 +33,9 @@
 | `verify-editable-paths.mjs` | `<exe> <全新私有home> <新证据目录> <CP ZIP> <上海捷敏DC文件>` | 冻结客户端真实文本输入事件、错误路径、修改未应用时禁用开始，以及真实CP/FT使用编辑后的输入和输出目录 |
 | `verify-bundle-ui.mjs` | `<exe> <私有home> <新证据目录>` | 需要一项成功上海捷敏 DVDS，脚本会重新执行该真实任务；操作菜单、搜索、日志、结果任务选择、主题及小窗口。不要给任意 CP/FT 历史，DVDS 以外的任务不符合输入要求 |
 | `measure-ui-performance.mjs` | `<exe> <新证据目录> [--strict]` | 可见窗口连续3轮，记录启动/切换/工厂搜索；超预算结果为 REVIEW，`--strict` 返回非零。并非全部硬件或冷启动性能承诺 |
-| `verify-cp-charts.mjs` | `<正在运行的本机Cockpit URL> <新证据目录>` | 专用样本要求：1批、25片、13参数，含 VTH、W2；依赖本机 Edge。实际渲染 Plotly、各页签与导出，不可拿任意小样本运行后宣称完整图表验收 |
+| `verify-cp-charts.mjs` | `<正在运行的本机Cockpit URL> <新证据目录>` | 0.3.6按需图表：真实CP清洗且至少2个参数，依赖本机Edge。验证默认单参数组合图、11种其他图形的草稿/重绘/移除、各页签实际渲染及Cpk导出；仅覆盖所用样本 |
+| `tests/verify_cp_lazy_charts.py`（仓库根目录） | `--home <CP私有home> --output <新证据目录> [--kit <独立engines目录>]` | 恰有1项成功真实CP清洗；创建并持有图表服务，调用上一项浏览器验证，记录实际runtime/CP包哈希、原结果不变、服务复用与退出回收。`--kit`仅存在于验证入口 |
+| `tests/verify_cp_chart_data.py`（仓库根目录） | `--home <本轮CP/FT私有home> --reference <同样本上一版home> --browser <浏览器证据目录> --output <JSON路径>` | 本轮华虹矩阵spec与捷敏DC合同；逐参数比较全部有限散点、原箱体/规格、下载Cpk、前后CP数据与FT单元格；不接受任意工厂样本并宣称通用验收 |
 
 ```powershell
 .\.venv-cpython\Scripts\python.exe -m pytest -q -rs tests engine_support/desktop_client/tests

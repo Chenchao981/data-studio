@@ -1,65 +1,86 @@
-// Exercise the real local CP Cockpit, including rendered Plotly figures.
-// Fixture-specific: one lot, 25 wafers, 13 parameters, VTH and Wafer 2.
-import {chromium} from '@playwright/test';
+// Real CP viewer: default combined plot, draft/apply, every optional chart/export.
+// Uses actual CSV filters; no synthetic 25-wafer assumptions.
+import {chromium,expect} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {performance} from 'node:perf_hooks';
 const [url,output]=process.argv.slice(2);
+if(!/^http:\/\/127\.0\.0\.1:\d+$/.test(url||''))throw Error('Expected owned local CP viewer URL');
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({headless:true,channel:'msedge'});
 let page;
+const combined='📊 箱线散点图';
+const optional=['🎯 BIN总览','📋 Pareto','📈 良率趋势','📊 箱体图','🔵 散点图','🗺️ Wafer Mapping','🎯 区域分析','🔍 失效叠加','📊 Wafer Summary','⚠ Cpk/超限','💾 数据表'];
 try {
- page=await browser.newPage({viewport:{width:1600,height:1100}});
- await page.goto(url);await page.getByRole('button',{name:'绘制图形',exact:false}).waitFor({timeout:90000});
+ page=await browser.newPage({viewport:{width:1600,height:1100},acceptDownloads:true});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ async function idle(){
+  await expect.poll(()=>page.locator('[data-testid="stApp"]').getAttribute('data-test-script-state'),{timeout:180000}).toBe('notRunning');
+  const exceptions=await page.getByTestId('stException').allTextContents();
+  if(exceptions.length)throw Error(exceptions.join('\n'));
+ }
+ async function tabs(expected){await expect.poll(()=>page.getByRole('tab').allTextContents(),{timeout:180000}).toEqual(expected);await idle();}
+ async function redraw(){await page.getByRole('button',{name:'重新绘制',exact:false}).click();}
+ const began=performance.now();
+ await page.goto(url);
+ await page.locator('[role="tab"],[data-testid="stException"]').first().waitFor({timeout:90000});
+ await idle();await tabs([combined]);
+ await expect(page.getByTestId('stImage').locator('img')).toHaveCount(1,{timeout:90000});
+ await expect(page.locator('.js-plotly-plot')).toHaveCount(0);
+ const initialMs=performance.now()-began;
+ await expect(page.getByRole('checkbox',{name:'全选参数',exact:true})).not.toBeChecked();
  await writeFile(output+'/initial.txt',await page.locator('body').innerText());
- await page.getByRole('button',{name:'绘制图形',exact:false}).click();
- await page.locator('.js-plotly-plot').first().waitFor({timeout:90000});
- await page.getByRole('tab',{name:'💾 数据表'}).click();
- await page.getByText('为保持前端流畅，页面预览最多显示前 5000 行；下载/原始文件仍保留完整数据。',{exact:true}).waitFor({timeout:180000});
- const tabs=page.getByRole('tab'),names=await tabs.allTextContents(),visited=[];
- for(let i=0;i<names.length;i++){
-  await tabs.nth(i).click();
+ const image=page.getByTestId('stImage').locator('img').first();
+ const focusedSrc=await image.getAttribute('src');
+ await writeFile(output+'/combined-focus.png',await (await page.request.get(new URL(focusedSrc,url).href)).body());
+ await page.screenshot({path:output+'/default.png',fullPage:true});
+ await page.getByText('显示完整纵轴范围',{exact:true}).click();
+ await expect(page.getByRole('checkbox',{name:'显示完整纵轴范围',exact:true})).toBeChecked();
+ await expect(image).not.toHaveAttribute('src',focusedSrc,{timeout:90000});await idle();
+ await writeFile(output+'/combined-full.png',await (await page.request.get(new URL(await image.getAttribute('src'),url).href)).body());
+ const extra=page.getByRole('combobox',{name:'其他图形',exact:true});
+ for(const label of optional){
+  await extra.fill(label);await page.getByRole('option',{name:label,exact:true}).click();await extra.press('Escape');
+  await idle();await tabs([combined]);
+  await expect(page.locator('.js-plotly-plot')).toHaveCount(0);
+ }
+ await page.screenshot({path:output+'/draft-before-redraw.png',fullPage:true});
+ const allBegan=performance.now();await redraw();await tabs([combined,...optional]);
+ await expect(page.locator('.js-plotly-plot').first()).toBeAttached({timeout:90000});await idle();
+ const allSelectedMs=performance.now()-allBegan;
+ const visited=[];
+ for(const name of [combined,...optional]){
+  await page.getByRole('tab',{name,exact:true}).click();
   const panel=page.getByRole('tabpanel',{includeHidden:false});
-  await panel.waitFor();
-  const errors=await page.locator('[data-testid="stException"]').allTextContents();
-  if(errors.length)throw Error(errors.join('\n'));
-  const text=await panel.innerText();
-  if(!text.trim())throw Error('Empty tab '+names[i]);
-  if(text.includes('was removed'))throw Error('Incompatible chart API: '+names[i]);
-  visited.push({name:names[i],figures:await panel.locator('.js-plotly-plot').count(),images:await panel.locator('img').count(),text:text.slice(0,1500)});
-  await page.screenshot({path:output+'/tab-'+i+'.png',fullPage:true});
+  await expect(panel).toBeVisible();const text=await panel.innerText();
+  if(!text.trim())throw Error('Empty chart panel '+name);
+  visited.push({name,figures:await panel.locator('.js-plotly-plot').count(),images:await panel.locator('img').count(),text:text.slice(0,2000)});
+  await page.screenshot({path:output+'/tab-'+(visited.length-1)+'.png',fullPage:true});
  }
- if(!visited.some(v=>v.figures>0))throw Error('No rendered plots');
- for(const [all,label,desired] of [['全选参数','筛选参数','VTH'],['全选片号','筛选片号',' / W2']]){
-  await page.getByText(all,{exact:true}).click();
-  const input=page.getByRole('combobox',{name:label,exact:true});await input.waitFor();
-  const block=page.getByTestId('stMultiSelect').filter({has:input});
-  await input.fill(desired);
-  const option=page.getByRole('option',label==='筛选片号'?{name:/\/ W2$/}:{name:desired,exact:true});
-  const value=(await option.innerText()).trim();await option.click();
-  await input.press('Escape');
-  await block.getByRole('button',{name:'Remove '+value,exact:true}).waitFor();
-  const removeNames=await block.getByRole('button',{name:/^Remove /}).evaluateAll(es=>es.map(e=>e.getAttribute('aria-label')));
-  for(const name of removeNames){
-   if(name!=='Remove '+value)await block.getByRole('button',{name,exact:true}).click();
-  }
-  await page.getByText(label==='筛选参数'?'当前：1/1 个批次，25/25 片，1/13 个参数。':'当前：1/1 个批次，1/25 片，1/13 个参数。',{exact:true}).waitFor();
-  await page.waitForFunction(()=>document.querySelector('[data-testid="stApp"]')?.getAttribute('data-test-script-state')==='notRunning');
- }
- await page.getByText('当前：1/1 个批次，1/25 片，1/13 个参数。',{exact:true}).waitFor();
- // Streamlit batches native widget changes. Commit the editing focus and wait
- // for that UI transaction before the separate explicit draw operation.
- await page.getByText('CP 交互分析前端 · 复用 cleaned / yield / spec 标准 CSV · 服务研发、质量和工艺分析',{exact:true}).click();
- await page.waitForTimeout(1000);
- await page.getByRole('button',{name:'绘制图形',exact:false}).click();
- await page.getByRole('tab',{name:'💾 数据表'}).click();
- await page.getByText('为保持前端流畅，页面预览最多显示前 5000 行；下载/原始文件仍保留完整数据。',{exact:true}).waitFor({timeout:90000});
- await page.getByRole('tab',{name:'⚠ Cpk/超限'}).click();
- const downloadPromise=page.waitForEvent('download');
- await page.getByRole('button',{name:'⬇ 导出 Cpk/超限表',exact:true}).click();
- const download=await downloadPromise;await download.saveAs(output+'/filtered-cpk.csv');
- await page.screenshot({path:output+'/filtered-cpk.png',fullPage:true});
- await writeFile(output+'/evidence.json',JSON.stringify({url,visited,filtered:'Wafer 2 / VTH',download:download.suggestedFilename()},null,2));
- console.log(JSON.stringify(visited.map(({name,figures})=>({name,figures}))));
-} catch(error){
- if(page){await writeFile(output+'/failure-body.txt',await page.locator('body').innerText());await page.screenshot({path:output+'/failure.png'});}
+ await page.getByRole('tab',{name:'⚠ Cpk/超限',exact:true}).click();
+ const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'⬇ 导出 Cpk/超限表',exact:true}).click();
+ await (await downloaded).saveAs(output+'/cpk.csv');
+ const extraBlock=page.getByTestId('stMultiSelect').filter({has:extra});
+ for(const label of optional){await extraBlock.getByRole('button',{name:'Remove '+label,exact:true}).click();await idle();}
+ await tabs([combined,...optional]);
+ await redraw();await tabs([combined]);await expect(page.locator('.js-plotly-plot')).toHaveCount(0);
+ await expect(page.getByTestId('stImage').locator('img')).toHaveCount(1);
+ const parameter=page.getByRole('combobox',{name:'筛选参数',exact:true});
+ const block=page.getByTestId('stMultiSelect').filter({has:parameter});
+ const first=(await block.getByRole('button',{name:/^Remove /}).getAttribute('aria-label')).replace(/^Remove /,'');
+ await parameter.click();const names=await page.getByRole('option').allTextContents();
+ const choices=names.map(s=>s.trim());const next=choices.find(s=>s==='VTH1')||choices.find(s=>s&&s!==first);
+ if(!next)throw Error('Requires at least two real parameters');
+ await page.getByRole('option',{name:next,exact:true}).click();await parameter.press('Escape');await idle();
+ await block.getByRole('button',{name:'Remove '+first,exact:true}).click();await idle();
+ const parameterMetric=page.getByTestId('stMetric').filter({has:page.getByText('参数',{exact:true})});
+ await expect(parameterMetric).toContainText(first);
+ await redraw();await idle();await expect(parameterMetric).toContainText(next);
+ await page.screenshot({path:output+'/redrawn-parameter.png',fullPage:true});
+ if(errors.length)throw Error(errors.join('\n'));
+ await writeFile(output+'/evidence.json',JSON.stringify({status:'PASS',url,initialMs,allSelectedMs,defaultTabs:[combined],defaultParameters:1,
+  optionalDraftDoesNotRender:true,removalRequiresRedraw:true,parameterRequiresRedraw:true,visited,exported:'cpk.csv',parameters:{first,next}},null,2));
+ console.log(JSON.stringify({status:'PASS',initialMs,allSelectedMs,visited:visited.map(({name,figures,images})=>({name,figures,images}))}));
+}catch(error){
+ if(page){await writeFile(output+'/failure-body.txt',await page.locator('body').innerText());await page.screenshot({path:output+'/failure.png',fullPage:true});}
  throw error;
-} finally {await browser.close();}
+}finally{await browser.close();}

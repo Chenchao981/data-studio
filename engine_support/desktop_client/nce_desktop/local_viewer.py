@@ -77,6 +77,8 @@ class Viewers:
             if source.count(old) != 1:
                 raise ValueError('此CP图表版本需要更新控件兼容适配')
             script.write_text(source.replace(old,new),encoding='utf8')
+            from .cp_chart_controls import adapt_dashboard
+            adapt_dashboard(script)
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
@@ -88,8 +90,12 @@ class Viewers:
             {
                 "PYTHONUTF8": "1",
                 "PYTHONIOENCODING": "utf-8",
+                "PYTHONNOUSERSITE": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
                 "PYTHONPATH": os.pathsep.join(
-                    [str(engine), *map(str,self.extra_paths), str(dependency_path(self.history.root))]
+                    [str(engine),
+                     *([str(Path(__file__).resolve().parents[1])] if self.extra_paths else []),
+                     *map(str,self.extra_paths), str(dependency_path(self.history.root))]
                 ),
                 "CP_COCKPIT_DATA_DIR": str(data),
                 "CP_DATA_ROOT": str(workspace / "cp-data"),
@@ -104,6 +110,7 @@ class Viewers:
             process = subprocess.Popen(
                 [
                     str(cfg.python_runtime),
+                    "-s", "-B",
                     str(Path(__file__).with_name("local_viewer_worker.py")),
                     str(gate),
                     str(script),
