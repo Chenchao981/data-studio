@@ -131,7 +131,7 @@ def includes(payload: dict[str, Path], workspace: Path) -> tuple[Path, Path]:
             out = "$INSTDIR" if parent == "." else "$INSTDIR\\" + nsis(parent)
             install.append(f'SetOutPath "{out}"')
             previous = parent
-        install.append(f'File /oname="{nsis(relative.name)}" "{nsis(source)}"')
+        install.append(f'File "/oname={nsis(relative.name)}" "{nsis(source)}"')
         remove.append(f'Delete "$INSTDIR\\{nsis(target)}"')
         folders.update(p.as_posix().replace("/", "\\") for p in relative.parents if p.as_posix() != ".")
     for folder in sorted(folders, key=lambda p: (-p.count("\\"), p)):
