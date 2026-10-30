@@ -29,19 +29,26 @@ try{
  await click('应用输出路径');await wait(`![...document.querySelectorAll('button')].some(b=>b.textContent==='应用输出路径')`);
  await click('应用输入路径');await wait(`document.querySelector('#input-paths').value===${JSON.stringify(cp)}`);
  await fill('#input-paths',path.join(out,'missing.zip'));await click('应用输入路径');await wait(`document.querySelector('#input-paths').getAttribute('aria-invalid')==='true'`);
- if(!await js(`[...document.querySelectorAll('button')].find(b=>b.textContent.includes('开始清洗')).disabled`))throw Error('Unapplied input can start an old task');
+ if(!await js(`[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='清洗').disabled`))throw Error('Unapplied input can start an old task');
  await screenshot('invalid-input');await click('取消修改');
  const completed=[];
  for(const [stage,factory,code,source] of [['CP','HUAHONG','LOCAL_CP_HUAHONG_CLEAN_V1',cp],['FT','JIEMIN','LOCAL_FT_JIEMIN_FT_ALL_V1',ft]]){
   await js(`document.querySelector('[data-stage=${stage}]').click()`);await wait(`!!document.querySelector('[data-factory=${factory}]')`);await js(`document.querySelector('[data-factory=${factory}]').click()`);await wait(`!!document.querySelector('[data-tool=${code}]')`);await js(`document.querySelector('[data-tool=${code}]').click()`);
   if(await js(`document.querySelector('#input-paths').value`)!==source){await fill('#input-paths','"'+source+'"');await click('应用输入路径');await wait(`document.querySelector('#input-paths').value===${JSON.stringify(source)}`);}
-  await click('开始清洗');
-  await wait(`['已完成','失败','已取消'].includes(document.querySelector('.task-log .badge')?.textContent)`,300000);
-  if(await js(`document.querySelector('.task-log .badge').textContent`)!=='已完成')throw Error(await js(`document.body.innerText`));
+  const before=await js(`document.querySelector('.task-log')?.dataset.taskId||''`);
+  await click('清洗');
+  await wait(`!!document.querySelector('.task-log')?.dataset.taskId&&document.querySelector('.task-log').dataset.taskId!==${JSON.stringify(before)}`);
+  const updates=[];let last='',captured=false;const deadline=Date.now()+300000;
+  while(Date.now()<deadline){const row=await js(`({state:document.querySelector('.log-state')?.textContent,text:document.querySelector('.log-stream')?.textContent||''})`);if(row.text!==last){updates.push({state:row.state,length:row.text.length,hasFile:/处理文件|读取 [0-9]/.test(row.text)});last=row.text;}if(!captured&&row.state==='处理中'&&row.text.length>800){await screenshot(stage+'-live');captured=true;}if(['已完成','失败','已取消'].includes(row.state))break;await pause(100);}
+  if(!updates.some(r=>r.state==='处理中'&&r.hasFile))throw Error('No file-level log before completion: '+JSON.stringify(updates));
+  await screenshot(stage+'-console');
+  if(await js(`document.querySelector('.task-log .log-state').textContent`)!=='已完成')throw Error(await js(`document.body.innerText`));
   await click('历史记录');await click('查看结果');await wait(`!!document.querySelector('.result-directory')`);
   if(!await js(`document.querySelector('.result-directory').textContent.includes(${JSON.stringify(output)})`))throw Error('Edited output directory was not used');
-  await screenshot(stage+'-result');completed.push({stage,source});
+  await screenshot(stage+'-result');completed.push({stage,source,updates,duration:await js(`document.querySelector('.metrics').innerText`)});
+  if(!await js(`document.querySelector('.metrics').innerText.includes('清洗耗时')`))throw Error('Missing elapsed time');
  }
+ if(await js(`document.body.innerText.includes('任务进度')`))throw Error('Removed task progress entry remains');
  if(errors.length)throw Error(JSON.stringify(errors));
  await writeFile(path.join(out,'evidence.json'),JSON.stringify({status:'PASS',exe,home,output,completed,uiErrors:errors,checks:['Editable text areas','Native text insertion','Dirty paths blocked','Invalid input preserves applied source','Actual CP and FT outputs use edited directory']},null,2));
  console.log('PASS: frozen editable paths and real CP/FT tasks');

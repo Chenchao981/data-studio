@@ -86,7 +86,7 @@ def main():
         paste('#input-paths', str(root / 'missing.txt'))
         click('应用输入路径'); wait(lambda: js('!!document.querySelector("#input-paths[aria-invalid=true]")'))
         assert [f['id'] for f in window.core.workspace_files()] == old_ids
-        wait(lambda: js('[...document.querySelectorAll("button")].find(b=>b.textContent.includes("开始清洗")).disabled'))
+        wait(lambda: js('[...document.querySelectorAll("button")].find(b=>b.textContent.trim()==="清洗").disabled'))
         shot('invalid-input.png'); click('取消修改')
         paste('#output-directory', str(file)); click('应用输出路径')
         wait(lambda: js('!!document.querySelector("#output-directory[aria-invalid=true]")'))
@@ -103,10 +103,10 @@ def main():
             wait(lambda: js(f'!!document.querySelector("[data-tool={tool}]")'))
             js(f'document.querySelector("[data-tool={tool}]").click()')
             edit('#input-paths', f'"{source}"')
-            wait(lambda: js('[...document.querySelectorAll("button")].find(b=>b.textContent.includes("开始清洗")).disabled'))
+            wait(lambda: js('[...document.querySelectorAll("button")].find(b=>b.textContent.trim()==="清洗").disabled'))
             click('应用输入路径')
             wait(lambda: js('document.querySelector("#input-paths").value') == str(source))
-            shot(stage + '-ready.png'); click('开始清洗')
+            shot(stage + '-ready.png'); click('清洗')
             wait(lambda: len(window.core.history()) == len(tasks) + 1)
             task_id = window.core.history()[0]['id']
             wait(lambda: window.core.task(task_id)['status'] in {'SUCCESS', 'FAILED', 'CANCELLED'}, 600)

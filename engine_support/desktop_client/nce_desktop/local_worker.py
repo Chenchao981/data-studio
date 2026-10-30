@@ -150,6 +150,10 @@ def process_runner(task_dir, dependencies=None):
 
 
 def execute(home, task_id):
+    started = time.perf_counter()
+    timing = {}
+    def mark(name):
+        timing[name] = round(time.perf_counter() - started, 4)
     paths()
     task_dir = home / "tasks" / task_id
     # Parent attaches us to a kill-on-close job before releasing this gate.
@@ -179,8 +183,10 @@ def execute(home, task_id):
                 if len(request.get("source_paths") or []) > 1
                 else Path(request["source"])
             )
+        mark('tool_ready')
         manifest, before = source_fingerprint(source, tool, task_dir)
         write_json(task_dir / "input-fingerprint.json", before)
+        mark('input_checked')
         cancelled(task_dir)
         from local_agent.personal_tools import PersonalToolRunner
         from .local_tool_runner import LocalToolRunner
@@ -192,6 +198,7 @@ def execute(home, task_id):
         )
         from .local_native import BY_CODE, run_native
 
+        mark('dependencies_checked')
         if tool.tool_code in BY_CODE or (tool.test_stage == 'CP' and tool.analysis_type == 'QUICK_PAT'):
             result = run_native(
                 config(home),
@@ -199,6 +206,7 @@ def execute(home, task_id):
                 source,
                 stage,
                 process_runner(task_dir, dependency_path(home)),
+                isolated_worker=True,
             )
         else:
             result = PersonalToolRunner(config(home), engine=engine).run(
@@ -207,6 +215,7 @@ def execute(home, task_id):
                 output_root=stage,
                 expected_source_file_count=manifest.file_count,
             )
+        mark('engine_complete')
         print("计算结束，正在核对输入未变化及结果完整性…", flush=True)
         _, after = source_fingerprint(source, tool, task_dir)
         if before != after:
@@ -214,6 +223,7 @@ def execute(home, task_id):
                 "计算期间原始输入发生变化；结果未登记为成功，请用稳定输入重试。"
             )
         cancelled(task_dir)
+        mark('input_rechecked')
         artifacts = []
         for file in sorted(stage.rglob("*")):
             if not file.is_file():
@@ -230,13 +240,16 @@ def execute(home, task_id):
             )
         if not artifacts or not any(a["primary"] for a in artifacts):
             raise ValueError("计算未生成可读取的主结果")
+        mark('artifacts_hashed')
         identity = {}
         if tool.analysis_type == "QUICK_CLEAN":
             from .local_summary import clean_summary
 
             identity = clean_summary(result.report_path, tool.test_stage)
         cancelled(task_dir)
+        mark('identity_read')
         receipt = {
+            'timing_seconds': timing,
             "schema": 1,
             "task_id": task_id,
             "artifacts": artifacts,

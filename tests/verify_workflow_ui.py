@@ -98,7 +98,7 @@ def main():
             input_sources.select_input_sources=lambda *a,**k:(args.cp.resolve(),)
             try:click('选择数据源');wait(lambda:js('document.querySelector(".file-panel .panel-bottom").innerText.includes("已选 1 项")'))
             finally:input_sources.select_input_sources=original
-            shot('cp-ready.png');click('开始清洗')
+            shot('cp-ready.png');click('清洗')
             wait(lambda:bool(w.core.history()));cp_id=w.core.history()[0]['id']
             wait(lambda:w.core.task(cp_id)['status'] in {'SUCCESS','FAILED'},600)
             assert w.core.task(cp_id)['status']=='SUCCESS',w.core.task(cp_id)['error']
@@ -111,7 +111,7 @@ def main():
             mime=QMimeData();mime.setUrls([QUrl.fromLocalFile(str(args.ft.resolve()))])
             w.view.dropEvent(QDropEvent(QPointF(300,300),Qt.DropAction.CopyAction,mime,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier))
             wait(lambda:js('document.querySelector(".file-panel .panel-bottom").innerText.includes("已选 1 项")') and js('document.querySelector(".file-table tbody tr").innerText.includes('+json.dumps(args.ft.name)+')'))
-            click('开始清洗');wait(lambda:len(w.core.history())==2);ft_id=w.core.history()[0]['id']
+            click('清洗');wait(lambda:len(w.core.history())==2);ft_id=w.core.history()[0]['id']
             wait(lambda:w.core.task(ft_id)['status'] in {'SUCCESS','FAILED'},600)
             assert w.core.task(ft_id)['status']=='SUCCESS',w.core.task(ft_id)['error']
             click('历史记录')

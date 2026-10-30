@@ -38,6 +38,57 @@ def install_engines(home: Path, cp: Path, ft: Path):
     write_json(registry, {"schema": 1, "runtime": sys.executable, "engines": engines})
 
 
+def bind_bundle_engines(home, bundle, manifest, profile):
+    """Use the verified standalone kit in place; never copy its DLLs per job."""
+    from importlib.metadata import distribution
+    from packaging.requirements import Requirement
+    from packaging.utils import canonicalize_name
+
+    bundle = bundle.resolve()
+    library = (bundle / 'runtime/Lib/site-packages').resolve()
+    if Path(sys.executable).resolve() != bundle / 'runtime/python.exe':
+        raise ValueError('计算环境不属于指定组件')
+    files, distributions = {}, {}
+
+    def pin(name):
+        key = canonicalize_name(name)
+        if key in distributions:
+            return
+        dist = distribution(name)
+        distributions[key] = dist.version
+        for req in dist.requires or []:
+            req = Requirement(req)
+            if req.marker is None or req.marker.evaluate({'extra': ''}):
+                pin(req.name)
+        for relative in dist.files or []:
+            if '..' in relative.parts or '__pycache__' in relative.parts or relative.suffix == '.pyc':
+                continue
+            source = Path(dist.locate_file(relative)).resolve(strict=True)
+            if not source.is_relative_to(library):
+                raise ValueError('依赖不属于固定环境：'+name)
+            expected = manifest['files'].get(source.relative_to(bundle).as_posix())
+            if not expected or digest(source) != expected:
+                raise ValueError('固定依赖校验失败：'+str(relative))
+            files[source.relative_to(library).as_posix()] = expected
+
+    for name in ('xlsxwriter', 'xlrd', 'py7zr'):
+        pin(name)
+    write_json(home / 'runtime-packages/manifest.json', {
+        'schema': 4, 'python': list(sys.version_info[:2]), 'root': str(library),
+        'files': files, 'distributions': distributions,
+    })
+    engines = {}
+    for stage, name in [('CP', 'cp'), ('FT', profile)]:
+        source = bundle / 'packages' / (name + '.pyz')
+        expected = manifest['files']['packages/' + name + '.pyz']
+        if digest(source) != expected:
+            raise ValueError('固定计算包校验失败：'+name)
+        engines[stage] = {'path': str(source), 'sha256': expected}
+    write_json(home / 'engines/registry.json', {
+        'schema': 1, 'runtime': sys.executable, 'engines': engines,
+    })
+
+
 def config(home):
     paths()
     from local_agent.config import AgentConfig
@@ -349,6 +400,10 @@ def prepare_dependencies(home):
 def dependency_path(home):
     folder = home / "runtime-packages"
     record = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+    if record.get('schema') == 4:
+        folder = Path(record['root']).resolve()
+        if folder != (Path(sys.executable).parent / 'Lib/site-packages').resolve():
+            raise ValueError('依赖不属于当前固定环境')
     if record["python"] != list(sys.version_info[:2]):
         raise ValueError("本地依赖与Python版本不匹配")
     for name, checksum in record["files"].items():

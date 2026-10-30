@@ -1,8 +1,10 @@
 # 独立项目测试入口
 
-更新：2026-10-29，当前界面版本 0.3.7，固定引擎 `studio-engine-20261029.3`。所有命令从 `F:\DataStudio` 执行，Python 使用 `.\.venv-cpython\Scripts\python.exe`。先按 README 准备固定环境、完整 `engines/` 和 `apps/web/dist/`。测试所用路径必须是新的独立目录，禁止使用正常个人历史做验证。
+更新：2026-10-30，当前界面版本 0.3.9，固定引擎 `studio-engine-20261030.2`。所有命令从 `F:\DataStudio` 执行，Python 使用 `.\.venv-cpython\Scripts\python.exe`。先按 README 准备固定环境、完整 `engines/` 和 `apps/web/dist/`。测试所用路径必须是新的独立目录，禁止使用正常个人历史做验证。
 
 迁移前 PLAN、CONTRACTS 与早期 VALIDATION 文档保留当时的日期、版本、统计和预览行为；它们不是当前操作手册。当前生产界面启动输入为空，只使用真实输入，结果为文件夹概要，Excel/CSV 由外部查看。本地图表仍可独立显示数据与图形，不等于恢复 APP 的 Excel 预览。
+
+0.3.9 清洗后留在工作台，实时日志在按钮下方；不再进入任务进度页。多项输入的选择列表位于“调整输入”折叠区。旧版UI验收记录保留其版本背景；本轮实际执行的入口见 [0.3.9记录](RELEASE-0.3.9.md)。
 
 ## Python / Qt 入口
 
@@ -10,6 +12,8 @@
 
 | 脚本（tests/ 下） | 参数 / 场景 | 边界 |
 | --- | --- | --- |
+| `verify_live_console_ui.py` | `--matrix <真实CP/FT矩阵> --output <新目录>` | 真实文件级日志在成功前追加、自动跟随/恢复、取消/错误、秒级耗时、工作台布局及主题 |
+| `reconcile_cleaning_speed.py` | `<私有基准目录> --candidate <新版home名>` | 比较三轮旧版、新版、直接引擎CSV全部单元格和Excel全部xl业务部件，并汇总总耗时；私有目录结构见脚本 |
 | `verify_desktop.py` | `--output <新目录>` | 开发态 Qt、原生文件对话框、100 项拖放、空结果页、主题、资源限制；成功/失败/取消使用内部模拟计算，仅作生命周期测试 |
 | `verify_real_ui.py` | `--source <文件或目录> --tool <明确工具码> --output <新目录>` | 真实规则选择、导入、计算、文件夹结果、ZIP 哈希与主题；默认工具为华虹 TD，DCP ZIP 必须显式指定 `LOCAL_CP_HUAHONG_CLEAN_V1` |
 | `verify_workflow_ui.py` | `--layout-only --output <新目录>` | 显式导入 100 个布局夹具、每页50项、跨页选择、阶段切换和小窗口；不表示支持新工厂或性能达标 |

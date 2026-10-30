@@ -7,6 +7,7 @@ import multiprocessing as mp
 import queue
 import threading
 import os
+import time
 from pathlib import Path
 
 from .core import now
@@ -49,6 +50,7 @@ class TaskManager:
         self.active = None
         self.job = None
         self.closed = False
+        self.started_clock = None
         self.core.recover()
 
     def start(self, task_id):
@@ -98,6 +100,8 @@ class TaskManager:
                     changed = True
                     if item.get("status"):
                         task["finished"] = now()
+                        if self.started_clock is not None:
+                            task["elapsedSeconds"] = round(time.monotonic()-self.started_clock, 3)
                 if not process.is_alive():
                     process.join()
                     if task["status"] == "RUNNING":
@@ -118,6 +122,7 @@ class TaskManager:
                 ready = self.ctx.Event()
                 process = self.ctx.Process(target=execute, args=(task, str(self.core.results), messages, cancelled, ready), daemon=True)
                 try:
+                    self.started_clock = time.monotonic()
                     process.start()
                     if os.name == "nt":
                         import win32api

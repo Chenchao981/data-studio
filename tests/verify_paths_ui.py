@@ -104,7 +104,7 @@ def main():
         pick(lambda d:(d.path_edit.setText(str(source)),d.go_button.click()))
         wait(lambda:js('document.querySelector("#input-paths")?.value')==str(source))
         click('DCP / TXT 数据清洗')
-        click('开始清洗');wait(lambda:len(w.core.history())==1);task_id=w.core.history()[0]['id']
+        click('清洗');wait(lambda:len(w.core.history())==1);task_id=w.core.history()[0]['id']
         # New settings must not redirect an already queued/running task.
         alternate=root/'下次输出';alternate.mkdir(exist_ok=True);w.core.set_output_directory(str(alternate))
         wait(lambda:w.core.task(task_id)['status'] in {'SUCCESS','FAILED','CANCELLED'},600)

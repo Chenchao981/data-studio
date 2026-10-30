@@ -71,7 +71,7 @@ def main():
             wait(lambda:js('document.querySelectorAll(".file-table tbody tr").length')==1)
         finally:
             input_sources.select_input_sources = original
-        shot('workspace-ready.png');click('开始清洗')
+        shot('workspace-ready.png');click('清洗')
         wait(lambda: bool(w.core.history()))
         task_id = w.core.history()[0]['id']
         js("window.gaps=[];let last=performance.now();window.beat=setInterval(()=>{window.gaps.push(performance.now()-last);last=performance.now()},25)")

@@ -119,6 +119,9 @@ class Controller:
         env.update(
             PYTHONUTF8="1",
             PYTHONIOENCODING="utf-8",
+            PYTHONNOUSERSITE="1",
+            PYTHONDONTWRITEBYTECODE="1",
+            MPLBACKEND="Agg",
             NUMEXPR_MAX_THREADS="8",
             PYTHONPATH=os.pathsep.join(
                 [str(ROOT / "desktop_client"), str(ROOT), str(ROOT / "backend")]

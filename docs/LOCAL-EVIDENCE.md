@@ -32,3 +32,8 @@
 # 在 F:\DataStudio 下；每次使用一个新的归档目录
 .\.venv-cpython\Scripts\python.exe packaging/archive_validation_evidence.py --output local-evidence/<新的归档目录>
 ```
+
+
+## 0.3.9 实时清洗与速度
+
+稳定目录：`F:\DataStudio\local-evidence\2026-10-30\live-cleaning`。`baseline-v2`、`direct-final`、`final-isolated`保留三轮旧版、原引擎直接调用、新版任务；`reconciliation-final-isolated.json`记录逐文件对账和耗时。`profile-bound`/`optimized`/`optimized-inline`是中间优化阶段，不替代最终结果。`live-ui-final`与`frozen-final-ui`保存开发/实际EXE的滚动日志、失败取消、编辑路径和结果耗时证据；`regression-isolated`是最终分发组件的佳泰/立昂微清洗与华虹CP/上海捷敏FT PAT实际回归。`pytest-release.txt`、`bundle-verification.json`记录最终100通过/1权限跳过及15,532文件哈希。早期失败尝试原样保留；具体界限见 [0.3.9记录](RELEASE-0.3.9.md)。该目录含源路径和业务结果，禁止提交Git。

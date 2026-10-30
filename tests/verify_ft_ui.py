@@ -79,7 +79,7 @@ def main():
         click('清空列表');wait(lambda:js('document.querySelector("#input-paths").value')=='')
         select_stage('FT')
         wait(lambda:js('document.querySelector("#input-paths").value')==str(source))
-        screenshot('01-jiemin-chooser.png');click('开始清洗');wait(lambda:len(w.core.history())==1)
+        screenshot('01-jiemin-chooser.png');click('清洗');wait(lambda:len(w.core.history())==1)
         task_id=w.core.history()[0]['id']
         wait(lambda:js('!!document.querySelector(".task-log")'))
         assert js('[...document.querySelectorAll(".history-filters button")].some(b=>b.textContent==="处理中"&&b.getAttribute("aria-pressed")==="true")')
@@ -87,7 +87,7 @@ def main():
         live_status=w.core.task(task_id)['status'];assert live_status=='RUNNING',live_status
         screenshot('02-live-log.png')
         wait(lambda:w.core.task(task_id)['status'] in {'SUCCESS','FAILED'},240)
-        wait(lambda:js('document.querySelector(".task-log .badge")?.textContent==="已完成"'))
+        wait(lambda:js('document.querySelector(".task-log .log-state")?.textContent==="已完成"'))
         assert js('document.querySelector(".log-stream").textContent.length>30')
         screenshot('03-completed-log.png')
         task=w.core.task(task_id);assert task['status']=='SUCCESS',task['error']

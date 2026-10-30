@@ -46,6 +46,17 @@ def clean_summary(package, stage):
 
                     shutil.copyfileobj(stream, temporary)
                     temporary.seek(0)
+                    from .xlsx_identity import read_identities, UnsupportedIdentity
+                    try:
+                        lots, rows_count, has_table = read_identities(temporary)
+                    except UnsupportedIdentity:
+                        temporary.seek(0)
+                    else:
+                        count += rows_count
+                        found = found or has_table
+                        for lot in sorted(lots):
+                            add(lot)
+                        continue
                     book = load_workbook(temporary, read_only=True, data_only=True)
                     try:
                         for sheet in book:

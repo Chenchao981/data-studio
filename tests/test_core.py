@@ -82,6 +82,8 @@ def test_process_success_failure_cancel_export_integrity(core):
     try:
         task=core.create_task("demo-cp");manager.start(task["id"])
         wait(manager,lambda:core.task(task["id"])["status"]=="SUCCESS")
+        assert 0 < core.task(task["id"])["elapsedSeconds"] < 15
+        assert core.task(task["id"])["started"] >= core.task(task["id"])["created"]
         path=core.output(task["id"])
         assert "NOT_PRODUCTION_DATA" in path.read_text(encoding="utf-8-sig")
         path.write_text("changed")

@@ -201,7 +201,7 @@ def visible(tool):
     )
 
 
-def run_native(cfg, tool, source, stage, runner):
+def run_native(cfg, tool, source, stage, runner, *, isolated_worker=False):
     """Execute only the pinned engine in a separate interpreter, including CP/FT module isolation."""
     import json
     import time
@@ -216,25 +216,44 @@ def run_native(cfg, tool, source, stage, runner):
         if digest(cfg.ft_package) != cfg.ft_package_sha256:
             raise ValueError('FT PAT计算包校验失败')
         extra_env = {'STUDIO_FT_PAT_PACKAGE': str(cfg.ft_package), 'STUDIO_FT_PAT_SHA256': cfg.ft_package_sha256}
-    done = runner(
-        [
-            str(cfg.python_runtime),
-            str(Path(__file__).with_name("local_native_worker.py")),
-            str(package),
-            tool.tool_code,
-            json.dumps(
-                [str(p) for p in source] if isinstance(source, list) else [str(source)]
+    if isolated_worker and tool.analysis_type == 'QUICK_CLEAN':
+        # local_worker already owns one task in a disposable, killable process.
+        # Avoid starting another Python interpreter for the same cleaning call.
+        import os
+        import sys
+        import subprocess
+        from .local_native_worker import execute
+        if Path(sys.executable).resolve() != cfg.python_runtime.resolve() or not sys.flags.no_user_site:
+            raise ValueError('清洗必须运行在禁用用户依赖的一次性固定环境中')
+        if digest(package) != tool.package_sha256:
+            raise ValueError('固定计算包校验失败')
+        sys.path.insert(0, str(Path(__file__).parent))
+        os.environ.update(CP_DATA_ROOT=str(stage.parent/'cp-data'),
+                          CP_LOG_DIR=str(stage.parent/'cp-data/logs'),
+                          CP_CONFIG_DIR=str(stage.parent/'cp-data/config'),
+                          MPLCONFIGDIR=str(stage.parent/'matplotlib'))
+        execute(package, tool.tool_code, source if isinstance(source,list) else [source], stage)
+        done = subprocess.CompletedProcess([], 0, '', '')
+    else:
+        done = runner(
+            [
+                str(cfg.python_runtime),
+                str(Path(__file__).with_name("local_native_worker.py")),
+                str(package),
+                tool.tool_code,
+                json.dumps(
+                    [str(p) for p in source] if isinstance(source, list) else [str(source)]
+                ),
+                str(stage),
+            ],
+            env=isolated_child_environment(
+                {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8", **extra_env}
             ),
-            str(stage),
-        ],
-        env=isolated_child_environment(
-            {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8", **extra_env}
-        ),
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=cfg.run_timeout_seconds,
-    )
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=cfg.run_timeout_seconds,
+        )
     if done.returncode:
         raise RuntimeError(
             "原工具执行失败：" + (done.stderr + "\n" + done.stdout)[-6000:]
@@ -250,7 +269,7 @@ def run_native(cfg, tool, source, stage, runner):
     report = stage / "result.zip"
     with zipfile.ZipFile(report, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for file in files:
-            archive.write(file, file.relative_to(stage / "files"))
+            archive.write(file, file.relative_to(stage / "files"), compress_type=zipfile.ZIP_STORED if file.suffix.lower() in {".xlsx", ".zip", ".png", ".jpg"} else zipfile.ZIP_DEFLATED)
     if (
         sum(p.stat().st_size for p in stage.rglob("*") if p.is_file())
         > cfg.max_output_bytes

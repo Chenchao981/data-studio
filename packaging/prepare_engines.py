@@ -16,6 +16,16 @@ def copy_sources(root):
     for source,target in [('packaging/studio_runner.py','studio_runner.py'),('packaging/studio_viewer.py','studio_viewer.py'),('python_core/result_index.py','studio_result_index.py')]:
         shutil.copyfile(STUDIO/source,code/target)
 
+def verify_files(root, files):
+    from concurrent.futures import ThreadPoolExecutor
+    def check(item):
+        name, expected = item
+        if digest(root/name) != expected:
+            raise ValueError("Pinned engine file changed: "+name)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(check, files.items()))
+
+
 def digest(p):
     with p.open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
 
@@ -26,8 +36,7 @@ def main():
     a=p.parse_args();root=STUDIO/'engines'
     if a.source_only:
         manifest=json.loads((root/'manifest.json').read_text(encoding='utf8'))
-        for name,sha in manifest['files'].items():
-            if digest(root/name)!=sha:raise ValueError('Existing engine kit changed: '+name)
+        verify_files(root, manifest['files'])
         copy_sources(root)
         write_manifest(root)
         return
@@ -85,10 +94,9 @@ print(json.dumps(tools,ensure_ascii=True))'''
     tools=json.loads(subprocess.check_output([str(root/'runtime/python.exe'),'-I','-c',program,str(root)],text=True,encoding='utf8'))
     files={f.relative_to(root).as_posix():digest(f) for prefix in ['code','packages','tools'] for f in (root/prefix).rglob('*') if f.is_file() and '__pycache__' not in f.parts}
     runtime=json.loads((root/'runtime/runtime-manifest.json').read_text())
-    for name,item in runtime['files'].items():
-        if digest(root/'runtime'/name)!=item['sha256']:raise ValueError('Installed runtime changed: '+name)
+    verify_files(root/'runtime', {name:item['sha256'] for name,item in runtime['files'].items()})
     files.update({'runtime/'+n:v['sha256'] for n,v in runtime['files'].items()})
-    (root/'manifest.json').write_text(json.dumps({'version':'studio-engine-20261030.1','python':'3.13.17','patStatistics':{'module':'shared/pat_engine.py','sha256':pat_sources[0]},'packages':runtime['packages'],'files':files,'tools':tools},ensure_ascii=False,indent=2),encoding='utf8')
+    (root/'manifest.json').write_text(json.dumps({'version':'studio-engine-20261030.2','python':'3.13.17','patStatistics':{'module':'shared/pat_engine.py','sha256':pat_sources[0]},'packages':runtime['packages'],'files':files,'tools':tools},ensure_ascii=False,indent=2),encoding='utf8')
     print('Pinned engine kit:',len(tools),'operations;',len(files),'verified files')
     if (root/'viewer-packages').is_dir():
         from prepare_viewer import pin_viewer

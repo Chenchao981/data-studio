@@ -63,7 +63,7 @@ try{
  await click('[aria-label="清空工厂搜索"]');
  await wait(`document.querySelectorAll('.factory-tile').length===6`);
  await screenshot('factory-cards-ft');
- const menus={DIANJI:['FT-ALL','PAT（原始数据）','SBL / SYL'],JIEQUN:['DC-AI（自动识别）','DVDS','RG','PAT（原始数据）','SBL / SYL'],RIYUEXIN:['DC','DVDS','RG','PAT（原始数据）','SBL / SYL'],JIEMIN:['DC','DVDS','RG','PAT（原始数据）'],JIJIA:['FT-ALL'],RIYUEGUANG:['数据清洗','PAT（原始数据）']};
+ const menus={DIANJI:['FT-ALL','电基PAT统计','SBL / SYL'],JIEQUN:['DC-AI（自动识别）','DVDS','RG','杰群PAT统计','SBL / SYL'],RIYUEXIN:['DC','DVDS','RG','日月新PAT统计','SBL / SYL'],JIEMIN:['DC','DVDS','RG','上海捷敏PAT统计'],JIJIA:['FT-ALL'],RIYUEGUANG:['数据清洗','日月光PAT统计']};
  for(const [factory,expected] of Object.entries(menus)){
   await click(`[data-factory=${factory}]`);
   const actual=await evaluate(`[...document.querySelectorAll('.chooser-operation .operation-card')].map(b=>b.textContent.trim())`);
@@ -84,7 +84,7 @@ try{
  if(!await evaluate(`document.querySelector('[data-factory=JETECH]')?.getAttribute('aria-pressed')==='true'`))throw Error('CP factory was lost on workspace switch');
  await screenshot('cp-workbench');
  await click('[data-stage=FT]');await screenshot('ft-workbench');
- await evaluate(`[...document.querySelectorAll('.sidebar button')].find(b=>b.textContent.trim()==='任务进度').click()`);
+ if(await evaluate(`document.body.innerText.includes('任务进度')`))throw Error('Removed progress navigation remains');
  await wait(`!!document.querySelector('.task-log')`);
  await button('历史记录');
  const dvdsHistory=`[...document.querySelectorAll('.history-list article')].filter(a=>a.textContent.includes('上海捷敏')&&a.textContent.includes('DVDS'))`;
@@ -97,10 +97,10 @@ try{
  // Re-run the single, previously verified real DVDS sample in the isolated home.
  await evaluate(`[...(${dvdsHistory})[0].querySelectorAll('button')].find(b=>b.textContent.trim()==='重新执行').click()`);
  await wait(`!!document.querySelector('.task-log')`);
- await wait(`[...document.querySelectorAll('.history-filters button')].some(b=>b.textContent==='处理中'&&b.getAttribute('aria-pressed')==='true')`);
+ await wait(`!!document.querySelector('.clean-launch')`);
  await wait(`document.querySelector('.log-stream')?.textContent.includes('上海捷敏 DVDS：读取')`,120000);
  await screenshot('packaged-live-log');
- await wait(`document.querySelector('.task-log .badge')?.textContent==='已完成'`,240000);
+ await wait(`document.querySelector('.task-log .log-state')?.textContent==='已完成'`,240000);
  await wait(`document.querySelector('.log-stream')?.textContent.includes('上海捷敏 DVDS 完成')`);
  await evaluate(`(()=>{const log=document.querySelector('.log-stream');log.style.height='45px';log.scrollTop=0;log.dispatchEvent(new Event('scroll',{bubbles:true}));})()`);
  await wait(`[...document.querySelectorAll('.task-log button')].some(b=>b.textContent==='回到最新')`);

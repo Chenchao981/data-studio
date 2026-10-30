@@ -23,7 +23,13 @@ def clean_cp(factory, sources, output):
             folder.mkdir()
             shutil.copy2(sources[0], folder / sources[0].name)
             sources = [folder]
-        return _clean_cp(factory, sources, output)
+        try:
+            return _clean_cp(factory, sources, output)
+        finally:
+            # Some original Excel readers retain unreachable workbook cycles.
+            # Release their handles before Windows removes our temporary input.
+            import gc
+            gc.collect()
 
 
 def _clean_cp(factory, sources, output):
@@ -97,7 +103,7 @@ def _clean_cp(factory, sources, output):
 def execute(package, code, sources, stage):
     # The original FT GUI attaches an INFO handler in CleanerWorker. Its headless
     # equivalent must expose those same messages to the per-task stdout log.
-    if code.startswith('LOCAL_FT_'):
+    if code.startswith(('LOCAL_FT_', 'LOCAL_CP_')):
         logging.basicConfig(level=logging.INFO, stream=sys.stdout,
                             format='%(asctime)s · %(levelname)s · %(message)s',
                             datefmt='%H:%M:%S')

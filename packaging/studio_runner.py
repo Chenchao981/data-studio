@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib,json,sys,time,zipfile,shutil
 from pathlib import Path
 from nce_desktop.local_controller import Controller
-from nce_desktop.local_engines import install_engines
+from nce_desktop.local_engines import bind_bundle_engines
 from nce_desktop.local_store import History,TERMINAL
 
 
@@ -43,7 +43,8 @@ def main(folder):
         if importlib.metadata.version(name)!=version:raise ValueError('Dependency version changed: '+name)
     spec=next(t for t in manifest['tools'] if t['tool_code']==task['toolCode'])
     home=folder/'engine-work'
-    install_engines(home,bundle/'packages/cp.pyz',bundle/('packages/'+spec['profile']+'.pyz'))
+    print('正在准备固定计算组件…',flush=True)
+    bind_bundle_engines(home,bundle,manifest,spec['profile'])
     history=History(home);controller=Controller(history)
     try:
         originals={}
@@ -78,7 +79,7 @@ def main(folder):
         receipt_path=folder/'receipt.json';write_json(receipt_path,receipt)
         archive=folder/'analysis-result.zip'
         with zipfile.ZipFile(archive.with_suffix('.zip.part'),'x',zipfile.ZIP_DEFLATED) as z:
-            for name,path in artifacts:z.write(path,'outputs/'+name)
+            for name,path in artifacts:z.write(path,'outputs/'+name,compress_type=zipfile.ZIP_STORED if path.suffix.lower() in {'.xlsx','.zip','.png','.jpg'} else zipfile.ZIP_DEFLATED)
             z.write(receipt_path,'receipt.json')
         archive.with_suffix('.zip.part').rename(archive)
         if (folder/'cancel').exists():raise ValueError('用户取消，未发布结果')
