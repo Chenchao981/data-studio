@@ -52,3 +52,14 @@ node apps/web/tests/verify-huahong-pat-ui.mjs dist/DesktopDataStudio/DesktopData
 前端源码变更后另运行 `npm run build`（工作目录 `apps/web`）。P0-3审核当时只修改文档和验证脚本；后续0.3.4功能按钮与工作台简化的构建/验证另见 [0.3.4发布记录](RELEASE-0.3.4.md)。
 
 真实引擎路径与数据对账另见 [P0-2](VALIDATION-KIT-SPAWN-20261029.md)；`run_standalone_smoke.py --kit`、`verify_real.py --matrix`、`verify_ft_reference.py`、`verify_jiemin_dynamic_contract.py` 和 reconcile 辅助脚本均需按 `--help` 提供私人样本/矩阵，帮助或语法通过不等于业务计算通过。UI 入口本轮实际结果见 [迁移审核](VALIDATION-MIGRATION-20261029.md)，证据保留规则见 [本地证据](LOCAL-EVIDENCE.md)。
+
+
+## 0.3.10 预热与进程复用
+
+- `tests/verify_real.py --matrix <私有样本矩阵> --home <新目录> --kit <指定kit> --wait-prewarm`：等待后台预热完成，再串行运行真实任务；`warmup.json` 单列预热耗时。省略 `--wait-prewarm` 可记录立即提交任务的总耗时。
+- `tests/verify_warm_lifecycle.py --kit <指定kit> --source <真实华虹ZIP> --output <新目录>`：连续复用、实际清洗中取消、进程崩溃、错误输入后恢复、关闭时停止非复用 PAT 子进程；不修改源文件。
+- `tests/reconcile_warm_cleaning.py <旧版home> <新版home> <输出JSON>`：逐项核对 CSV/Excel，以及日月光共享入口 ZIP 内业务文件；验证三类进程分别复用。样本矩阵名称使用 `类型-轮次`。
+- `tests/run_standalone_smoke.py` 现在同时检查常驻 `studio_service.py` 和独立 `studio_runner.py` 的实际 runtime；不再要求通信线程本身来自另一个 Python 进程。保留旧 spawn 验证钩子。
+- `tests/verify_operation_ui.py` 增加所有工厂最左侧默认选中与“开始清洗”检查；`apps/web/tests/verify-editable-paths.mjs` 增加实际冻结 APP 的预热就绪状态检查。
+
+运行时仍使用仓库锁定的 `.venv-cpython/Scripts/python.exe`。本轮数据、性能口径和限制见 [0.3.10 发布记录](RELEASE-0.3.10.md)。

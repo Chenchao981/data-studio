@@ -1,4 +1,4 @@
-"""One immutable task per process; calls existing engines, never web APIs."""
+"""Immutable task execution in an owned compute process; never calls web APIs."""
 
 from __future__ import annotations
 
@@ -149,7 +149,7 @@ def process_runner(task_dir, dependencies=None):
     return run
 
 
-def execute(home, task_id):
+def execute(home, task_id, *, persistent=False):
     started = time.perf_counter()
     timing = {}
     def mark(name):
@@ -193,9 +193,8 @@ def execute(home, task_id):
 
         print(f"输入文件 {manifest.file_count} 个，开始本机计算。", flush=True)
         stage = task_dir / "staging"
-        engine = LocalToolRunner(
-            process_runner=process_runner(task_dir, dependency_path(home))
-        )
+        dependencies=dependency_path(home)
+        engine = LocalToolRunner(process_runner=process_runner(task_dir,dependencies),reuse_process=persistent)
         from .local_native import BY_CODE, run_native
 
         mark('dependencies_checked')
@@ -205,7 +204,7 @@ def execute(home, task_id):
                 tool,
                 source,
                 stage,
-                process_runner(task_dir, dependency_path(home)),
+                process_runner(task_dir, dependencies),
                 isolated_worker=True,
             )
         else:

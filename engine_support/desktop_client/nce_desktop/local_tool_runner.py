@@ -7,7 +7,41 @@ from app.infrastructure.child_process_environment import isolated_child_environm
 
 
 class LocalToolRunner(QuickToolRunner):
+    def __init__(self, *, process_runner=None, reuse_process=False):
+        if process_runner is None:
+            import subprocess
+            process_runner=subprocess.run
+        super().__init__(process_runner=process_runner)
+        self.reuse_process=reuse_process
+
     def _run_ft(self, *, analysis_type, release, source, work, results):
+        if self.reuse_process and analysis_type=='QUICK_CLEAN' and release.factory_code=='RIYUEGUANG':
+            # Execute the exact approved shared-package script in its dedicated
+            # warm process. CP/native FT are never imported into this process.
+            import contextlib,os,subprocess,sys,traceback
+            from collections import deque
+            from app.infrastructure.quick_tool_runner import _FT_PERSONAL_TOOL_SCRIPT
+            class Tail:
+                def __init__(self,stream):self.stream=stream;self.parts=deque(maxlen=100)
+                def write(self,text):self.parts.append(text[-8000:]);return self.stream.write(text)
+                def flush(self):self.stream.flush()
+                def value(self):return ''.join(self.parts)[-8000:]
+            def inline(args,**kwargs):
+                if args!=[str(Path(sys.executable).resolve()),'-c',_FT_PERSONAL_TOOL_SCRIPT] or not sys.flags.no_user_site:
+                    raise ValueError('共享清洗只能在固定独立进程执行')
+                old=os.environ.copy();out,err=Tail(sys.stdout),Tail(sys.stderr);code=0
+                try:
+                    os.environ.update(kwargs['env'])
+                    with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):
+                        try:exec(_FT_PERSONAL_TOOL_SCRIPT,{'__name__':'__main__'})
+                        except SystemExit as exc:
+                            if exc.code:code=1;print(str(exc),file=sys.stderr)
+                        except Exception:code=1;traceback.print_exc()
+                finally:os.environ.clear();os.environ.update(old)
+                return subprocess.CompletedProcess(args,code,out.value(),err.value())
+            original=self._process_runner;self._process_runner=inline
+            try:return super()._run_ft(analysis_type=analysis_type,release=release,source=source,work=work,results=results)
+            finally:self._process_runner=original
         if analysis_type != "QUICK_CHART":
             return super()._run_ft(
                 analysis_type=analysis_type,

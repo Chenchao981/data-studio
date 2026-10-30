@@ -19,7 +19,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "engine_support"), str(ROOT / "engine_supp
 
 def bind_validation_kit(kit: Path) -> None:
     """Validation-only hook, reinstalled when Windows spawn imports this script."""
-    from python_core import engine
+    from python_core import engine, warm_engine
     import psutil
 
     kit = kit.resolve(strict=True)
@@ -28,8 +28,8 @@ def bind_validation_kit(kit: Path) -> None:
 
     def launch(command, **kwargs):
         runtime = kit / 'runtime/python.exe'
-        runner = kit / 'code/studio_runner.py'
-        if Path(command[0]).resolve() != runtime or Path(command[3]).resolve() != runner:
+        script=next((Path(arg).resolve() for arg in command[1:] if str(arg).endswith('.py')),None)
+        if Path(command[0]).resolve() != runtime or script not in {kit/'code/studio_runner.py',kit/'code/studio_service.py'}:
             raise ValueError('Validation worker attempted to use another engine kit')
         expected_pythonpath = os.pathsep.join(map(str, [kit / 'code', kit / 'code/backend', kit / 'code/desktop_client']))
         if kwargs['env']['PYTHONPATH'] != expected_pythonpath:
@@ -61,6 +61,7 @@ def bind_validation_kit(kit: Path) -> None:
 
     # Replace this module's transport only; do not patch global subprocess.Popen.
     engine.subprocess = types.SimpleNamespace(**{**vars(transport), 'Popen': launch})
+    warm_engine.subprocess = engine.subprocess
 
 
 if __name__ == '__mp_main__' and os.environ.get('STUDIO_VALIDATION_ENGINE_KIT'):
@@ -81,7 +82,7 @@ def main() -> None:
     from python_core.core import Core
     from python_core.tasks import TaskManager
 
-    engine.engine_root = lambda: kit
+    bind_validation_kit(kit)
     core = Core(args.home.resolve())
     exports = args.home.resolve().parent / (args.home.resolve().name + "-exports")
     exports.mkdir(parents=True, exist_ok=True)
@@ -99,8 +100,14 @@ def main() -> None:
                 raise TimeoutError(task["id"])
         result = core.task(task["id"])
         if result['status'] == 'SUCCESS':
-            evidence = json.loads((core.results / task['id'] / 'validation-engine.json').read_text(encoding='utf8'))
-            assert Path(evidence['kit']) == kit and evidence['workerPid'] != os.getpid()
+            if result.get('computeWorker'):
+                details=result['computeWorker']
+                worker=manager.warm.workers[details['stage']+('-shared' if details.get('profile')=='shared' else '')]
+                evidence=json.loads((worker.control/'validation-engine.json').read_text(encoding='utf8'))
+                assert result['computeWorker']['pid']==evidence['runtimePid']
+                (core.results/task['id']/'validation-engine.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf8')
+            else:evidence = json.loads((core.results / task['id'] / 'validation-engine.json').read_text(encoding='utf8'))
+            assert Path(evidence['kit']) == kit and evidence['runtimePid'] != os.getpid()
             assert Path(evidence['executable']) == kit / 'runtime/python.exe'
             spec = next(t for t in engine.configuration()[1]['tools'] if t['tool_code'] == args.tool)
             package = 'packages/' + ('cp' if spec['test_stage'] == 'CP' else spec['profile']) + '.pyz'

@@ -13,6 +13,23 @@ from pathlib import Path
 from .core import now
 
 
+class EngineThread(threading.Thread):
+    """Transport only; all data parsing remains in an owned external process."""
+    def __init__(self, task, folder, messages, cancelled, ready, warm):
+        from .engine import run_real
+        def run():
+            if ready.wait(30):run_real(task,folder,messages,cancelled,warm)
+        super().__init__(target=run,daemon=True)
+        self.cancelled=cancelled
+
+    def terminate(self):self.cancelled.set()
+    def close(self):pass
+
+
+class ThreadQueue(queue.Queue):
+    def close(self):pass
+
+
 def simulate(task, folder, messages, cancelled):
     try:
         for progress in range(0, 100, 5):
@@ -52,6 +69,10 @@ class TaskManager:
         self.closed = False
         self.started_clock = None
         self.core.recover()
+        from .engine import engine_root
+        from .warm_engine import WarmEngines
+        self.warm=WarmEngines(engine_root(),self.core.root)
+        self.warm_status=self.warm.status()
 
     def start(self, task_id):
         with self.lock:
@@ -86,6 +107,9 @@ class TaskManager:
         with self.lock:
             if self.closed:
                 return False
+            warm_status=self.warm.status()
+            if warm_status!=self.warm_status:
+                self.warm_status=warm_status;changed=True
             if self.active:
                 task_id, process, messages, cancelled = self.active
                 task = self.core.task(task_id)
@@ -95,6 +119,8 @@ class TaskManager:
                     except queue.Empty:
                         break
                     task.update(item)
+                    if cancelled.is_set() and item.get('status') == 'FAILED':
+                        task.update(status='CANCELLED',error='用户取消任务，未发布结果')
                     if cancelled.is_set() and item.get('status') == 'SUCCESS' and not item.get('publishedDirectory'):
                         task.update(status='CANCELLED', output='', error='用户取消任务，未发布结果')
                     changed = True
@@ -118,13 +144,17 @@ class TaskManager:
             if not self.active and self.waiting:
                 task_id = self.waiting.pop(0)
                 task = self.core.task(task_id)
-                messages, cancelled = self.ctx.Queue(), self.ctx.Event()
-                ready = self.ctx.Event()
-                process = self.ctx.Process(target=execute, args=(task, str(self.core.results), messages, cancelled, ready), daemon=True)
+                if task.get('demo'):
+                    messages, cancelled = self.ctx.Queue(), self.ctx.Event()
+                    ready = self.ctx.Event()
+                    process = self.ctx.Process(target=execute, args=(task, str(self.core.results), messages, cancelled, ready), daemon=True)
+                else:
+                    messages,cancelled,ready=ThreadQueue(),threading.Event(),threading.Event()
+                    process=EngineThread(task,str(self.core.results),messages,cancelled,ready,self.warm)
                 try:
                     self.started_clock = time.monotonic()
                     process.start()
-                    if os.name == "nt":
+                    if os.name == "nt" and not isinstance(process,EngineThread):
                         import win32api
                         import win32job
                         self.job = win32job.CreateJobObject(None, "")
@@ -177,6 +207,7 @@ class TaskManager:
                 task.update(status="CANCELLED", error="退出客户端，等待任务已取消；可重新执行", finished=now())
                 self.core.save_task(task)
             self.waiting.clear()
+            self.warm.close()
 
 
 def execute(task, folder, messages, cancelled, ready):

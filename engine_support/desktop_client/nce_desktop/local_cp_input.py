@@ -30,7 +30,7 @@ def prepare_huahong_inputs(sources, temporary_parent, *, identity_scope=None):
             raise ValueError('未找到华虹DCP/TXT或压缩包，或输入超过100,000项')
         seen_paths, identities, groups = set(), set(), {}
         size = 0
-        def add(path, hint=None):
+        def add(path, hint=None, *, extracted=False):
             nonlocal size
             if path.is_symlink():raise ValueError('输入文件不能是链接')
             candidates = [hint, *path.parents] if hint else list(path.parents)
@@ -51,7 +51,10 @@ def prepare_huahong_inputs(sources, temporary_parent, *, identity_scope=None):
             if target.exists():raise ValueError('同一批次内输入文件重名：'+path.name)
             size += path.stat().st_size
             if size>8*1024**3 or len(identities)>100_000:raise ValueError('解包数据超过本机上限')
-            shutil.copyfile(path,target)
+            # Extracted files are private temporary copies. Move them into the
+            # checked layout instead of writing and deleting all bytes again.
+            if extracted:shutil.move(str(path),str(target))
+            else:shutil.copyfile(path,target)
             groups[batch] = target_dir
         for index, entry in enumerate(entries):
             identity = str(entry.resolve()).casefold()
@@ -66,14 +69,7 @@ def prepare_huahong_inputs(sources, temporary_parent, *, identity_scope=None):
                     archive = alias / (entry.stem+'.7z');shutil.copyfile(entry,archive)
                 prepared = stack.enter_context(prepare_archive_input(
                     [archive], allowed_suffixes=tuple(RAW), archive_suffixes=('.zip','.7z','.rar'),
-                    source_label='华虹DCP/TXT', progress=print, prefer_common_root=_looks_like_hh_batch_name))
-                if any(not any(_looks_like_hh_batch_name(p.name) for p in path.parents) for path in prepared.data_files):
-                    # An extra archive wrapper can hide the batch from the
-                    # original flat importer. Reuse its safe path-preserving
-                    # extraction, then normalize the verified batch ourselves.
-                    prepared = stack.enter_context(prepare_archive_input(
-                        [archive], allowed_suffixes=tuple(RAW), archive_suffixes=('.zip','.7z','.rar'),
-                        source_label='华虹DCP/TXT', progress=print, preserve_member_paths=True))
-                for path in prepared.data_files:add(path,path.parent)
+                    source_label='华虹DCP/TXT', progress=print, preserve_member_paths=True))
+                for path in prepared.data_files:add(path,path.parent,extracted=prepared.is_temporary)
         print(f'递归输入准备完成：{len(groups)} 个批次，{len(identities)} 个晶圆文件',flush=True)
         yield next(iter(groups.values())) if len(groups)==1 else root

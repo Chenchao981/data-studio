@@ -13,7 +13,7 @@ def copy_sources(root):
         dest=code/src.relative_to(REPO)
         dest.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(src,dest)
-    for source,target in [('packaging/studio_runner.py','studio_runner.py'),('packaging/studio_viewer.py','studio_viewer.py'),('python_core/result_index.py','studio_result_index.py')]:
+    for source,target in [('packaging/studio_runner.py','studio_runner.py'),('packaging/studio_service.py','studio_service.py'),('packaging/studio_viewer.py','studio_viewer.py'),('python_core/result_index.py','studio_result_index.py')]:
         shutil.copyfile(STUDIO/source,code/target)
 
 def verify_files(root, files):
@@ -96,7 +96,7 @@ print(json.dumps(tools,ensure_ascii=True))'''
     runtime=json.loads((root/'runtime/runtime-manifest.json').read_text())
     verify_files(root/'runtime', {name:item['sha256'] for name,item in runtime['files'].items()})
     files.update({'runtime/'+n:v['sha256'] for n,v in runtime['files'].items()})
-    (root/'manifest.json').write_text(json.dumps({'version':'studio-engine-20261030.2','python':'3.13.17','patStatistics':{'module':'shared/pat_engine.py','sha256':pat_sources[0]},'packages':runtime['packages'],'files':files,'tools':tools},ensure_ascii=False,indent=2),encoding='utf8')
+    (root/'manifest.json').write_text(json.dumps({'version':'studio-engine-20261030.3','python':'3.13.17','patStatistics':{'module':'shared/pat_engine.py','sha256':pat_sources[0]},'packages':runtime['packages'],'files':files,'tools':tools},ensure_ascii=False,indent=2),encoding='utf8')
     print('Pinned engine kit:',len(tools),'operations;',len(files),'verified files')
     if (root/'viewer-packages').is_dir():
         from prepare_viewer import pin_viewer

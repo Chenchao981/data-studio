@@ -37,3 +37,8 @@
 ## 0.3.9 实时清洗与速度
 
 稳定目录：`F:\DataStudio\local-evidence\2026-10-30\live-cleaning`。`baseline-v2`、`direct-final`、`final-isolated`保留三轮旧版、原引擎直接调用、新版任务；`reconciliation-final-isolated.json`记录逐文件对账和耗时。`profile-bound`/`optimized`/`optimized-inline`是中间优化阶段，不替代最终结果。`live-ui-final`与`frozen-final-ui`保存开发/实际EXE的滚动日志、失败取消、编辑路径和结果耗时证据；`regression-isolated`是最终分发组件的佳泰/立昂微清洗与华虹CP/上海捷敏FT PAT实际回归。`pytest-release.txt`、`bundle-verification.json`记录最终100通过/1权限跳过及15,532文件哈希。早期失败尝试原样保留；具体界限见 [0.3.9记录](RELEASE-0.3.9.md)。该目录含源路径和业务结果，禁止提交Git。
+
+
+## 2026-10-30：预热与默认功能（0.3.10）
+
+稳定目录：`F:\DataStudio\local-evidence\2026-10-30\warm-cleaning`。包含旧版/新版各12个真实任务、源文件及业务结果对账、预热与立即开始的分开计时、进程复用/取消/崩溃恢复、指定kit实际进程证据，以及冻结APP的路径编辑与实时日志验证。以 `reconciliation-release.json`、`lifecycle-release/evidence.json`、`frozen-ready-final/evidence.json`、`bundle-final.json` 和 `pytest-release.log` 为最终证据入口；初期排障记录不冒充验收通过。

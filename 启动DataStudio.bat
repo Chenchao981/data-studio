@@ -1,5 +1,9 @@
 @echo off
 cd /d "%~dp0"
+if exist "dist\v0.3.10\DesktopDataStudio\DesktopDataStudio.exe" if exist "dist\v0.3.10\DesktopDataStudio\engines\manifest.json" (
+  start "" "dist\v0.3.10\DesktopDataStudio\DesktopDataStudio.exe"
+  exit /b
+)
 if exist "dist\v0.3.9\DesktopDataStudio\DesktopDataStudio.exe" if exist "dist\v0.3.9\DesktopDataStudio\engines\manifest.json" (
   start "" "dist\v0.3.9\DesktopDataStudio\DesktopDataStudio.exe"
   exit /b

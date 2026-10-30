@@ -217,14 +217,14 @@ def run_native(cfg, tool, source, stage, runner, *, isolated_worker=False):
             raise ValueError('FT PAT计算包校验失败')
         extra_env = {'STUDIO_FT_PAT_PACKAGE': str(cfg.ft_package), 'STUDIO_FT_PAT_SHA256': cfg.ft_package_sha256}
     if isolated_worker and tool.analysis_type == 'QUICK_CLEAN':
-        # local_worker already owns one task in a disposable, killable process.
-        # Avoid starting another Python interpreter for the same cleaning call.
+        # Already inside an owned, killable compute process. The warm transport
+        # keeps CP/native FT/shared FT in separate module namespaces.
         import os
         import sys
         import subprocess
         from .local_native_worker import execute
         if Path(sys.executable).resolve() != cfg.python_runtime.resolve() or not sys.flags.no_user_site:
-            raise ValueError('清洗必须运行在禁用用户依赖的一次性固定环境中')
+            raise ValueError('清洗必须运行在禁用用户依赖的独立固定环境中')
         if digest(package) != tool.package_sha256:
             raise ValueError('固定计算包校验失败')
         sys.path.insert(0, str(Path(__file__).parent))

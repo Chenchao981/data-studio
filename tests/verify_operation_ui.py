@@ -60,6 +60,8 @@ def main():
                 settle()
                 codes = json.loads(js('JSON.stringify([...document.querySelectorAll(".operation-card")].filter(e=>!e.disabled).map(e=>e.dataset.tool))'))
                 assert codes
+                assert js('document.querySelector(".operation-card:not(:disabled)").getAttribute("aria-pressed")==="true"'), (stage,factory,'leftmost operation must be selected')
+                assert js('document.querySelector(".clean-launch button").textContent.trim()==="开始清洗"')
                 for code in codes:
                     query = '[data-tool=' + json.dumps(code) + ']'
                     before = js('JSON.stringify([...document.querySelectorAll(".operation-card")].map(e=>({x:e.offsetLeft,y:e.offsetTop,w:e.offsetWidth,h:e.offsetHeight})))')

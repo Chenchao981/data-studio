@@ -68,6 +68,11 @@ class Bridge(QObject):
             logging.warning("Bridge request failed: %s", error)
         self.response.emit(request_id, json.dumps({"ok": not bool(error), "value": value, "error": str(error) if error else ""}, ensure_ascii=False, allow_nan=False))
 
+    def bootstrap(self):
+        snapshot=self.core.bootstrap()
+        snapshot['engines']['workers']=self.tasks.warm.status()
+        return snapshot
+
     def submit(self, request_id, work):
         if len(self.pending) >= 32:
             raise ValueError("本地请求较多，请稍后重试")
@@ -172,7 +177,7 @@ class Bridge(QObject):
                 self.complete(request_id, QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.core.root / "logs"))), None)
             else:
                 operations = {
-                    "bootstrap": self.core.bootstrap,
+                    "bootstrap": self.bootstrap,
                     "identifyFiles": self.core.workspace_files,
                     "applyInputPaths": lambda: self.core.apply_input_paths(p.get('text')),
                     "applyOutputPath": lambda: self.core.apply_output_path(p.get('text')),

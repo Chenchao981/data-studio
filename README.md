@@ -9,8 +9,8 @@
 
 ## 本机使用
 
-双击根目录的 `启动DataStudio.bat`，优先运行已核验的 `dist/v0.3.9/DesktopDataStudio/DesktopDataStudio.exe`，新版缺失时依次回退0.3.8、0.3.7、0.3.6、0.3.5和旧目录 `dist/DesktopDataStudio/DesktopDataStudio.exe`。
-当前本机程序为0.3.9，清洗按钮下直接显示实时滚动日志，取消独立“任务进度”入口，结果显示清洗耗时；真实样本耗时及优化边界见 [0.3.9记录](docs/RELEASE-0.3.9.md)。CP/FT图表统一隐藏CONT类参数，详见 [0.3.8记录](docs/RELEASE-0.3.8.md)。CP/FT PAT仍共用固定FT统计实现，名称统一为“工厂名称PAT统计”，详见 [0.3.7记录](docs/RELEASE-0.3.7.md)；旧历史报表保留原算法，重新执行才使用新算法。CP图表保留默认组合图和按需重绘，输入/输出路径继续支持粘贴编辑。当前用户安装包仍为0.3.3。请先关闭原工作区窗口，再从根目录启动新版。
+双击根目录的 `启动DataStudio.bat`，优先运行已核验的 `dist/v0.3.10/DesktopDataStudio/DesktopDataStudio.exe`，新版缺失时依次回退0.3.9、0.3.8、0.3.7、0.3.6、0.3.5和旧目录 `dist/DesktopDataStudio/DesktopDataStudio.exe`。
+当前本机程序为0.3.10，启动后预热并复用独立清洗进程，切换工厂默认选中最左侧可用功能，主按钮为“开始清洗”；同机对比、首次预热等待及验证边界见 [0.3.10记录](docs/RELEASE-0.3.10.md)。实时滚动日志和清洗耗时显示继续保留。CP/FT图表统一隐藏CONT类参数，详见 [0.3.8记录](docs/RELEASE-0.3.8.md)。CP/FT PAT仍共用固定FT统计实现，名称统一为“工厂名称PAT统计”，详见 [0.3.7记录](docs/RELEASE-0.3.7.md)；旧历史报表保留原算法，重新执行才使用新算法。CP图表保留默认组合图和按需重绘，输入/输出路径继续支持粘贴编辑。当前用户安装包仍为0.3.3。请先关闭原工作区窗口，再从根目录启动新版。
 历史记录继续使用 `%LOCALAPPDATA%\NCE\DesktopDataStudio-M0`；原有清洗输出路径不变。
 同一工作区仅运行一个实例，计算任务串行排队。
 

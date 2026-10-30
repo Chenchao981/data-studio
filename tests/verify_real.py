@@ -12,7 +12,7 @@ if os.environ.get('STUDIO_VALIDATION_ENGINE_KIT'):
     engine.engine_root=lambda:Path(os.environ['STUDIO_VALIDATION_ENGINE_KIT'])
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--home',required=True,type=Path);p.add_argument('--matrix',required=True,type=Path);p.add_argument('--limit',type=int);p.add_argument('--resume',action='store_true');p.add_argument('--keep-going',action='store_true');p.add_argument('--kit',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--home',required=True,type=Path);p.add_argument('--matrix',required=True,type=Path);p.add_argument('--limit',type=int);p.add_argument('--resume',action='store_true');p.add_argument('--keep-going',action='store_true');p.add_argument('--kit',type=Path);p.add_argument('--wait-prewarm',action='store_true');a=p.parse_args()
     if a.kit:
         kit=a.kit.resolve();assert (kit/'manifest.json').is_file()
         os.environ['STUDIO_VALIDATION_ENGINE_KIT']=str(kit)
@@ -31,6 +31,14 @@ def main():
     expected_by_name={case['name']:case.get('expected_status','SUCCESS') for case in json.loads(a.matrix.read_text(encoding='utf8'))}
     unexpected=[native['title'] for task,native in zip(rows,native_rows) if task['status']!=expected_by_name[native['title']]]
     try:
+        if a.wait_prewarm:
+            warm_started=time.perf_counter()
+            while any(not w.control or not (w.control/'ready.json').exists() for w in manager.warm.workers.values()):
+                errors=[w.error for w in manager.warm.workers.values() if w.error]
+                if errors:raise RuntimeError(str(errors))
+                if time.perf_counter()-warm_started>120:raise TimeoutError('Engine warmup')
+                time.sleep(.05)
+            (a.home/'warmup.json').write_text(json.dumps({'seconds':time.perf_counter()-warm_started,'workers':[json.loads((w.control/'ready.json').read_text(encoding='utf8')) for w in manager.warm.workers.values()]}),encoding='utf8')
         for case in cases:
             began=time.perf_counter()
             if case.get('parent'):

@@ -47,7 +47,7 @@ def main():
   cases=json.loads(a.matrix.read_text(encoding='utf-8-sig'))[:2]
   for case in cases:
    stage=configure(case);assert not js('!!document.querySelector(".file-table")');shot(stage+'-ready')
-   previous={t['id'] for t in w.core.history()};button('清洗');wait(lambda:any(t['id'] not in previous for t in w.core.history()))
+   previous={t['id'] for t in w.core.history()};button('开始清洗');wait(lambda:any(t['id'] not in previous for t in w.core.history()))
    task=next(t for t in w.core.history() if t['id'] not in previous);tid=task['id'];changes=[];last='';paused=False;tail_verified=False
    deadline=time.monotonic()+300
    while time.monotonic()<deadline:
@@ -73,12 +73,12 @@ def main():
    samples.append(dict(stage=stage,task=task,logUpdates=changes,autoScroll=tail_verified,duration=js('document.querySelector(".metrics").innerText')))
    js(f'document.querySelector("[data-stage={stage}]").click()');wait(lambda:js('!!document.querySelector(".clean-launch")'))
   # Cancel a real job through the inline console, before publication.
-  configure(cases[0]);previous={t['id'] for t in w.core.history()};button('清洗')
+  configure(cases[0]);previous={t['id'] for t in w.core.history()};button('开始清洗')
   wait(lambda:any(t['id'] not in previous for t in w.core.history()));tid=next(t['id'] for t in w.core.history() if t['id'] not in previous)
   button('取消');wait(lambda:w.core.task(tid)['status']=='CANCELLED',40)
   assert not w.core.task(tid).get('publishedDirectory');shot('cancelled');checks.append('real task cancellation without publication')
   bad=root/'broken.zip';bad.write_bytes(b'not an archive')
-  configure({**cases[0],'source':str(bad)});previous={t['id'] for t in w.core.history()};button('清洗')
+  configure({**cases[0],'source':str(bad)});previous={t['id'] for t in w.core.history()};button('开始清洗')
   wait(lambda:any(t['id'] not in previous for t in w.core.history()));tid=next(t['id'] for t in w.core.history() if t['id'] not in previous)
   wait(lambda:w.core.task(tid)['status']=='FAILED',60);wait(lambda:js('document.querySelector(".log-state").textContent')=='失败')
   assert not w.core.task(tid).get('publishedDirectory');shot('failed');checks.append('invalid archive visible error and no partial publication')

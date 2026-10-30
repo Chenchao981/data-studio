@@ -33,7 +33,7 @@ def progress(folder, phase, value):
         print(phase, flush=True)
 
 
-def main(folder):
+def main(folder, *, persistent=False, bindings=None):
     task=json.loads((folder/'request.json').read_text(encoding='utf8'))
     bundle=Path(__file__).resolve().parent.parent
     manifest=json.loads((bundle/'manifest.json').read_text(encoding='utf8'))
@@ -44,8 +44,15 @@ def main(folder):
     spec=next(t for t in manifest['tools'] if t['tool_code']==task['toolCode'])
     home=folder/'engine-work'
     print('正在准备固定计算组件…',flush=True)
-    bind_bundle_engines(home,bundle,manifest,spec['profile'])
-    history=History(home);controller=Controller(history)
+    if bindings is None:
+        bind_bundle_engines(home,bundle,manifest,spec['profile'])
+    else:
+        # Reuse immutable dependency metadata discovered during warmup. The
+        # worker still hashes the actual package/dependency bytes for every job.
+        for name,value in bindings.items():
+            destination=home/name;destination.parent.mkdir(parents=True,exist_ok=True)
+            write_json(destination,value)
+    history=History(home);controller=None if persistent else Controller(history)
     try:
         originals={}
         if task.get('parentTask'):
@@ -65,11 +72,28 @@ def main(folder):
             source=str(copied)
         else:
             source=task['sourcePaths'][0] if len(task['sourcePaths'])==1 else '; '.join(task['sourcePaths'])
-        native=controller.submit(task['toolCode'],source,task['name'])
-        progress(folder,'原工具正在计算 · 进度以完成状态为准',20)
-        while history.get(native)['status'] not in TERMINAL:
-            if (folder/'cancel').exists():controller.cancel(native)
-            time.sleep(.3)
+        if persistent:
+            # The entire runner is already an owned, killable compute process.
+            # Keep the same request, fingerprint and publication contracts without
+            # creating two more interpreters for each small cleaning task.
+            from nce_desktop.local_engines import request_for
+            from nce_desktop.local_worker import execute
+            request=request_for(home,task['toolCode'],source,task['name'])
+            native=history.create(request)
+            native_folder=history.task_dir(native)
+            write_json(native_folder/'request.json',request)
+            history.transition(native,'RUNNING')
+            (native_folder/'go').touch()
+            progress(folder,'正在清洗',20)
+            execute(home,native,persistent=True)
+            outcome=json.loads((native_folder/'outcome.json').read_text(encoding='utf8'))
+            history.transition(native,outcome['status'],error=outcome.get('error',''),result=outcome.get('result'))
+        else:
+            native=controller.submit(task['toolCode'],source,task['name'])
+            progress(folder,'原工具正在计算 · 进度以完成状态为准',20)
+            while history.get(native)['status'] not in TERMINAL:
+                if (folder/'cancel').exists():controller.cancel(native)
+                time.sleep(.3)
         row=history.get(native)
         if row['status']!='SUCCESS':raise ValueError(row['error'] or '计算已中断')
         artifacts=[(a['path'],history.artifact_path(native,a)) for a in row['result']['artifacts']]
@@ -88,6 +112,7 @@ def main(folder):
         output={'status':'SUCCESS','progress':100,'phase':'已完成','nativeId':native,'followupCode':followup,'output':str(archive),'sha256':digest(archive),'tables':[],'previewHash':'', 'warning':'','receipt':{'files':row['result'].get('source_files'),'records':row['result'].get('record_count'),'package':row['result']['package_sha256'],'factory':row['factory'],'stage':row['stage']},'artifacts':[{'name':name,'path':str(path),'sha256':digest(path)} for name,path in artifacts]}
         write_json(folder/'outcome.json',output)
     except BaseException as exc:write_json(folder/'outcome.json',{'status':'FAILED','error':str(exc)})
-    finally:controller.shutdown()
+    finally:
+        if controller:controller.shutdown()
 
 if __name__=='__main__':main(Path(sys.argv[1]))

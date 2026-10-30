@@ -44,9 +44,28 @@ def catalog():
         return {'ready': False, 'tools': [], 'version': '', 'error': f'计算组件未就绪：{exc}'}
 
 
-def run_real(task, folder, messages, cancelled):
+def environment(engine):
+    env={k:v for k,v in os.environ.items() if not k.startswith(('PYTHON','QT','CONDA','TMS_','PYMS_'))}
+    env.update(PYTHONUTF8='1',PYTHONUNBUFFERED='1',PYTHONNOUSERSITE='1',PYTHONDONTWRITEBYTECODE='1',MPLBACKEND='Agg')
+    env['PATH']=str(engine/'runtime')+';'+str(engine/'runtime/Scripts')+';'+os.environ.get('SystemRoot',r'C:\Windows')+'\\System32;'+str(engine/'tools')
+    code=engine/'code'
+    env['PYTHONPATH']=os.pathsep.join(map(str,[code,code/'backend',code/'desktop_client']))
+    return env
+
+
+def verify_components(engine,manifest,cancelled=None):
+    for name,checksum in manifest['files'].items():
+        if name.startswith('runtime/') and '/' in name[len('runtime/'):]:continue
+        if cancelled and cancelled.is_set():raise InterruptedError('已取消组件校验')
+        path=(engine/name).resolve()
+        if not path.is_relative_to(engine.resolve()) or digest(path)!=checksum:
+            raise ValueError('计算组件校验失败：'+name)
+
+
+def run_real(task, folder, messages, cancelled, warm=None):
     root = Path(folder)/task['id']
     proc = None
+    tree = None
     try:
         began = time.perf_counter()
         engine, manifest = configuration()
@@ -54,34 +73,32 @@ def run_real(task, folder, messages, cancelled):
         (root/'execution.log').write_text('正在校验固定计算组件…\n',encoding='utf8')
         if task['engineHash'] != digest(engine/'manifest.json'):
             raise ValueError('计算组件在任务创建后改变，请新建任务')
-        for name, checksum in manifest['files'].items():
-            # Full runtime is verified when the kit is prepared. Rechecking
-            # 14k library files for every task makes small jobs needlessly slow.
-            if name.startswith('runtime/') and '/' in name[len('runtime/'):]:
-                continue
-            if cancelled.is_set():raise ValueError('已取消组件校验')
-            path = (engine/name).resolve()
-            if not path.is_relative_to(engine.resolve()) or digest(path) != checksum:
-                raise ValueError('计算组件校验失败：'+name)
+        verify_components(engine,manifest,cancelled)
         verified = time.perf_counter()
         (root/'request.json').write_text(json.dumps(task, ensure_ascii=False), encoding='utf8')
-        env = {k:v for k,v in os.environ.items() if not k.startswith(('PYTHON','QT','CONDA','TMS_','PYMS_'))}
-        env.update(PYTHONUTF8='1', PYTHONUNBUFFERED='1', PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1', MPLBACKEND='Agg')
-        env['PATH'] = str(engine/'runtime')+';'+str(engine/'runtime/Scripts')+';'+os.environ.get('SystemRoot',r'C:\Windows')+'\\System32;'+str(engine/'tools')
+        env = environment(engine)
         code = engine/'code'
         env['PYTHONPATH'] = os.pathsep.join(map(str,[code,code/'backend',code/'desktop_client']))
         messages.put({'progress': 5, 'phase': '校验原始数据与计算规则'})
-        with (root/'execution.log').open('a',encoding='utf8') as log:
-            proc = subprocess.Popen([str(engine/'runtime/python.exe'),'-s','-B',str(code/'studio_runner.py'),str(root)],env=env,cwd=root,stdout=log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+        spec=next(t for t in manifest['tools'] if t['tool_code']==task['toolCode'])
+        reusable=spec.get('profile')=='native' or (spec.get('profile')=='shared' and spec['test_stage']=='FT' and spec['factory_code']=='RIYUEGUANG')
+        key=spec['test_stage']+('-shared' if spec.get('profile')=='shared' else '')
+        worker=warm.workers.get(key) if warm and reusable and spec['analysis_type']=='QUICK_CLEAN' else None
+        worker_receipt=None
+        if worker:
+            worker_receipt=worker.run(root,cancelled,messages)
+        else:
+          with (root/'execution.log').open('a',encoding='utf8') as log:
+            proc = subprocess.Popen([str(engine/'runtime/python.exe'),'-s','-B',str(code/'studio_runner.py'),str(root)],env=env,cwd=root,stdout=log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),start_new_session=os.name!='nt')
+            from .warm_engine import ProcessTree
+            tree=ProcessTree(proc)
             started = time.monotonic()
-            stopping = None
             last_progress = None
             while proc.poll() is None:
                 if cancelled.is_set():
                     (root/'cancel').touch()
-                    stopping = stopping or time.monotonic()
-                    if time.monotonic()-stopping > 15:
-                        raise ValueError('用户取消，计算进程已停止')
+                    tree.close()
+                    break
                 if time.monotonic()-started > 4*3600+180:
                     raise ValueError('计算超过4小时时限')
                 progress = root/'progress.json'
@@ -97,6 +114,7 @@ def run_real(task, folder, messages, cancelled):
             messages.put({'status':'CANCELLED','error':'用户取消任务，未发布部分输出'})
             return
         outcome = json.loads((root/'outcome.json').read_text(encoding='utf8'))
+        if worker_receipt:outcome['computeWorker']=worker_receipt
         if outcome['status'] != 'SUCCESS':
             raise ValueError(outcome.get('error','计算未完成'))
         calculated = time.perf_counter()
@@ -116,6 +134,7 @@ def run_real(task, folder, messages, cancelled):
     except BaseException as exc:
         messages.put({'status':'CANCELLED' if cancelled.is_set() else 'FAILED','error':str(exc),'phase':'执行结束'})
     finally:
+        if tree:tree.close()
         if proc is not None and proc.poll() is None:
             proc.kill()
             proc.wait(timeout=5)
