@@ -88,7 +88,7 @@ print(json.dumps(tools,ensure_ascii=True))'''
     for name,item in runtime['files'].items():
         if digest(root/'runtime'/name)!=item['sha256']:raise ValueError('Installed runtime changed: '+name)
     files.update({'runtime/'+n:v['sha256'] for n,v in runtime['files'].items()})
-    (root/'manifest.json').write_text(json.dumps({'version':'studio-engine-20261029.3','python':'3.13.17','patStatistics':{'module':'shared/pat_engine.py','sha256':pat_sources[0]},'packages':runtime['packages'],'files':files,'tools':tools},ensure_ascii=False,indent=2),encoding='utf8')
+    (root/'manifest.json').write_text(json.dumps({'version':'studio-engine-20261030.1','python':'3.13.17','patStatistics':{'module':'shared/pat_engine.py','sha256':pat_sources[0]},'packages':runtime['packages'],'files':files,'tools':tools},ensure_ascii=False,indent=2),encoding='utf8')
     print('Pinned engine kit:',len(tools),'operations;',len(files),'verified files')
     if (root/'viewer-packages').is_dir():
         from prepare_viewer import pin_viewer

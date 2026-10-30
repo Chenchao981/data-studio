@@ -68,11 +68,13 @@ try {
  const block=page.getByTestId('stMultiSelect').filter({has:parameter});
  const first=(await block.getByRole('button',{name:/^Remove /}).getAttribute('aria-label')).replace(/^Remove /,'');
  await parameter.click();const names=await page.getByRole('option').allTextContents();
+ if(names.some(name=>/^CONT(?=$|[^A-Z])/i.test(name.normalize('NFKC').trim())))throw Error('CONT item remains in parameter choices');
+ await writeFile(output+'/parameter-options.json',JSON.stringify({names,controlNamesHidden:true},null,2));
  const choices=names.map(s=>s.trim());const next=choices.find(s=>s==='VTH1')||choices.find(s=>s&&s!==first);
  if(!next)throw Error('Requires at least two real parameters');
  await page.getByRole('option',{name:next,exact:true}).click();await parameter.press('Escape');await idle();
  await block.getByRole('button',{name:'Remove '+first,exact:true}).click();await idle();
- const parameterMetric=page.getByTestId('stMetric').filter({has:page.getByText('参数',{exact:true})});
+ const parameterMetric=page.getByRole('tabpanel',{name:combined,exact:true}).getByTestId('stMetric').filter({has:page.getByText('参数',{exact:true})});
  await expect(parameterMetric).toContainText(first);
  await redraw();await idle();await expect(parameterMetric).toContainText(next);
  await page.screenshot({path:output+'/redrawn-parameter.png',fullPage:true});

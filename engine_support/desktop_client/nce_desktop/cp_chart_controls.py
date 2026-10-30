@@ -21,6 +21,11 @@ OPTIONAL = (
 def adapt_dashboard(script: Path) -> None:
     """Fail closed if the pinned dashboard's layout or redraw contract changes."""
     tree = ast.parse(script.read_text(encoding="utf8"))
+    selectors = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+                 and n.name == "available_parameters"]
+    if len(selectors) != 1:
+        raise ValueError("CP参数目录入口已改变，不能应用CONT过滤")
+    selectors[0].decorator_list.append(ast.Name(id="_studio_analysis_names", ctx=ast.Load()))
     main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
     tabs = next(n for n in main.body if isinstance(n, ast.Assign)
                 and any(isinstance(t, ast.Name) and t.id == "tabs" for t in n.targets))
@@ -64,6 +69,7 @@ def adapt_dashboard(script: Path) -> None:
     pending.body.pop()
     params_apply = next(n for n in main.body if isinstance(n, ast.Assign)
                         and ast.unparse(n.value) == "list(applied_filters['parameters'])")
+    params_apply.value = ast.parse("_studio_visible_names(applied_filters['parameters'])", mode="eval").body
     i = main.body.index(params_apply) + 1
     main.body[i:i] = ast.parse("pass_bin = applied_filters['pass_bin']\nmax_points = applied_filters['max_points']").body
     tabs.value = ast.parse("_studio_tabs(st, applied_filters['charts'])", mode="eval").body
@@ -82,7 +88,8 @@ def adapt_dashboard(script: Path) -> None:
     position = max((i + 1 for i, node in enumerate(tree.body)
                     if isinstance(node, ast.ImportFrom) and node.module == "__future__"), default=0)
     tree.body[position:position] = ast.parse(
-        "from nce_desktop.cp_chart_controls import selected_tabs as _studio_tabs, render_combined as _studio_combined").body
+        "from nce_desktop.cp_chart_controls import selected_tabs as _studio_tabs, render_combined as _studio_combined\n"
+        "from nce_desktop.parameter_visibility import analysis_parameter_result as _studio_analysis_names, visible_parameter_names as _studio_visible_names").body
     ast.fix_missing_locations(tree)
     source = ast.unparse(tree) + "\n"
     compile(source, str(script), "exec")

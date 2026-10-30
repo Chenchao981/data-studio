@@ -4,6 +4,11 @@ import json
 import sys
 from pathlib import Path
 
+if __package__:
+    from .parameter_visibility import visible_parameter_names
+else:
+    from parameter_visibility import visible_parameter_names
+
 
 def main():
     package, factory, source, work, output = sys.argv[1:]
@@ -67,11 +72,12 @@ def main():
     )
 
     meta, data, spec = load_scatter_bundle(manifest)
+    parameters = visible_parameter_names(meta.get("parameters") or [])
+    if not parameters:
+        raise ValueError("没有可绘图的参数（CONT类项目不参与分析）")
     layout = prepare_ft_chart_layout(data)
     stats = {}
-    if not meta.get("parameters"):
-        raise ValueError("没有可绘图的参数")
-    for i, param in enumerate(meta["parameters"], 1):
+    for i, param in enumerate(parameters, 1):
         for kind, fn in [
             ("散点图", render_ft_scatter_png),
             ("箱体图", render_ft_boxplot_png),
@@ -81,7 +87,7 @@ def main():
                 name = f"{i:03d}_" + safe_png_name(param, kind + "_" + label)
                 (output / name).write_bytes(png)
                 stats[name] = summary
-        print(f'参数图片 {i}/{len(meta["parameters"])}', flush=True)
+        print(f'参数图片 {i}/{len(parameters)}', flush=True)
     (output / "chart_statistics.json").write_text(
         json.dumps(stats, ensure_ascii=False, default=str), encoding="utf-8"
     )
