@@ -49,3 +49,7 @@
 程序：`dist/v0.3.10/DesktopDataStudio/DesktopDataStudio.exe`。根目录 `启动DataStudio.bat` 优先启动本版，保留旧版本回退。安装程序仍为 0.3.3，本轮没有生成新安装程序。
 
 稳定证据：`local-evidence/2026-10-30/warm-cleaning/`（不进入 Git）。最终基准为 `baseline-final/`、`frozen-final/`、`reconciliation-release.json`；生命周期为 `lifecycle-release/`；冻结界面为 `frozen-ready-final/`；指定引擎为 `kit-cp/`、`kit-ft/`；完整回归为 `pytest-release.log`；发布校验为 `bundle-final.json`。早期排障和探索记录单独保留，不作为最终验收。
+
+## 2026-11-02 界面小修
+
+取消选择数据源后的“已导入并选中…可开始清洗”通知，避免开始清洗时通知仍停留在界面。本机 0.3.10 发布目录已更新前端资源，EXE、固定引擎和版本号不变。类型检查、前端构建及真实 Qt 界面选择数据源→开始清洗→CP 样本完成验证通过。证据及原前端备份：`local-evidence/2026-11-02/remove-import-notice/`；本次前端哈希以其中的 `delivery.json` 为准，10 月 30 日的交付证据保留原样。
